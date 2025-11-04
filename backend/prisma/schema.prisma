@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  username     String   @unique
+  name         String
+  avatar       String?
+  bio          String?
+  createdAt    DateTime @default(now())
+
+  posts          Post[]
+  comments       Comment[]
+  likes          Like[]
+  saves          Save[]
+  following      Follow[]        @relation("following")
+  followers      Follow[]        @relation("followers")
+  supportTickets SupportTicket[]
+  collections    Collection[]
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  title     String
+  content   String
+  genre     String
+  createdAt DateTime @default(now())
+
+  comments        Comment[]
+  likes           Like[]
+  saves           Save[]
+  collectionItems CollectionItem[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Like {
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  post   Post   @relation(fields: [postId], references: [id])
+  postId String
+
+  @@id([userId, postId])
+}
+
+model Save {
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  post   Post   @relation(fields: [postId], references: [id])
+  postId String
+
+  @@id([userId, postId])
+}
+
+model Follow {
+  follower   User   @relation("following", fields: [followerId], references: [id])
+  followerId String
+  followee   User   @relation("followers", fields: [followeeId], references: [id])
+  followeeId String
+
+  @@id([followerId, followeeId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  price       Int
+  image       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  subject   String
+  message   String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String?
+  startsAt  DateTime
+  location  String
+  poster    String?
+  createdAt DateTime @default(now())
+}
+
+model Collection {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  title       String
+  description String?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  items CollectionItem[]
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collection   Collection @relation(fields: [collectionId], references: [id])
+  collectionId String
+  post         Post       @relation(fields: [postId], references: [id])
+  postId       String
+  createdAt    DateTime   @default(now())
+}

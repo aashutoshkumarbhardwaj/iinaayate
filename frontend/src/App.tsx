@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Toaster } from './components/ui/sonner';
 import { Navigation } from './components/Navigation';
 import { HomePage } from './components/HomePage';
@@ -15,8 +15,11 @@ import { DailyPoemPage } from './components/DailyPoemPage';
 import { EventsPage } from './components/EventsPage';
 import { WritersPage } from './components/WritersPage';
 import { BlogPage } from './components/BlogPage';
+import { setAuthToken, authAPI } from './utils/api';
+import { HelpPage } from './components/HelpPage';
+import { StorePage } from './components/StorePage';
 
-type Page = 'auth' | 'home' | 'explore' | 'write' | 'profile' | 'post' | 'search' | 'notifications' | 'settings' | 'collections' | 'daily' | 'events' | 'writers' | 'blog';
+type Page = 'auth' | 'home' | 'explore' | 'write' | 'profile' | 'post' | 'search' | 'notifications' | 'settings' | 'collections' | 'daily' | 'events' | 'writers' | 'blog' | 'help' | 'store';
 
 interface NavigationState {
   page: Page;
@@ -30,6 +33,20 @@ export default function App() {
     page: 'home',
   });
 
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      setAuthToken(token);
+      setIsAuthenticated(true);
+      (async () => {
+        try {
+          const me = await authAPI.me();
+          if (me?.user?.id) localStorage.setItem('currentUserId', me.user.id);
+        } catch {}
+      })();
+    }
+  }, []);
+
   const handleAuth = () => {
     setIsAuthenticated(true);
   };
@@ -37,9 +54,19 @@ export default function App() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setNavState({ page: 'home' });
+    setAuthToken(null);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUserId');
   };
 
   const handleNavigate = (page: string) => {
+    if (page === 'profile') {
+      const id = localStorage.getItem('currentUserId');
+      if (id) {
+        setNavState({ page: 'profile', userId: id });
+        return;
+      }
+    }
     setNavState({ page: page as Page });
   };
 
@@ -63,7 +90,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white">
       <Toaster position="top-center" />
-      <Navigation currentPage={navState.page} onNavigate={handleNavigate} />
+      <Navigation currentPage={navState.page} onNavigate={handleNavigate} onLogout={handleLogout} />
       
       {navState.page === 'home' && (
         <HomePage
@@ -115,17 +142,22 @@ export default function App() {
 
       {navState.page === 'notifications' && (
         <NotificationsPage
-          onBack={handleBack}
+          onBack={() => setNavState({ page: 'home' })}
           onPostClick={handlePostClick}
           onUserClick={handleUserClick}
         />
       )}
 
       {navState.page === 'settings' && (
-        <SettingsPage
-          onBack={handleBack}
-          onLogout={handleLogout}
-        />
+        <SettingsPage onBack={() => setNavState({ page: 'home' })} onLogout={handleLogout} />
+      )}
+
+      {navState.page === 'help' && (
+        <HelpPage onBack={() => setNavState({ page: 'home' })} />
+      )}
+
+      {navState.page === 'store' && (
+        <StorePage onBack={() => setNavState({ page: 'home' })} />
       )}
 
       {navState.page === 'collections' && (

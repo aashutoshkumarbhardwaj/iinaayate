@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
-import { mockPosts, mockUsers } from '../data/mockData';
+import { useEffect, useState } from 'react';
+import { postAPI, userAPI } from '../utils/api';
 import { PostCard } from './PostCard';
 import { TopPoemsCarousel } from './TopPoemsCarousel';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -13,9 +13,25 @@ interface HomePageProps {
 
 export function HomePage({ onPostClick, onUserClick }: HomePageProps) {
   const [featuredPoetIndex, setFeaturedPoetIndex] = useState(0);
-  
-  // Get top poets
-  const featuredPoets = [...mockUsers].sort((a, b) => b.followers - a.followers).slice(0, 8);
+  const [featuredPoets, setFeaturedPoets] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [users, feed] = await Promise.all([
+          userAPI.getTopUsers(),
+          postAPI.getPosts({ limit: 10 }),
+        ]);
+        if (mounted) {
+          setFeaturedPoets(users);
+          setPosts(feed);
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
   
   const scrollPoets = (direction: 'left' | 'right') => {
     if (direction === 'left') {
@@ -75,11 +91,11 @@ export function HomePage({ onPostClick, onUserClick }: HomePageProps) {
                 className="flex flex-col items-center group"
               >
                 <Avatar className="w-20 h-20 mb-2 ring-2 ring-rose-100 group-hover:ring-rose-300 transition-all">
-                  <AvatarImage src={poet.avatar} alt={poet.name} />
-                  <AvatarFallback>{poet.name[0]}</AvatarFallback>
+                  <AvatarImage src={poet.avatar || ''} alt={poet.name} />
+                  <AvatarFallback>{(poet.name || 'U')[0]}</AvatarFallback>
                 </Avatar>
                 <p className="text-sm text-gray-900 text-center truncate w-full group-hover:text-rose-600 transition-colors">
-                  {poet.name.split(' ')[0]}...
+                  {(poet.name || '').split(' ')[0]}...
                 </p>
               </button>
             ))}
@@ -93,7 +109,7 @@ export function HomePage({ onPostClick, onUserClick }: HomePageProps) {
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl text-gray-900 mb-6">Latest Poems</h2>
           <div className="space-y-6">
-            {mockPosts.map((post) => (
+            {posts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}

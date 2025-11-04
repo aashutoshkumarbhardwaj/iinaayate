@@ -2,6 +2,8 @@ import { ArrowLeft, Heart, MessageCircle, UserPlus, Bookmark } from 'lucide-reac
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { useEffect, useState } from 'react';
+import { notificationsAPI } from '../utils/api';
 
 interface NotificationsPageProps {
   onBack: () => void;
@@ -9,73 +11,24 @@ interface NotificationsPageProps {
   onUserClick: (userId: string) => void;
 }
 
-// Mock notifications for now
-const mockNotifications = [
-  {
-    id: '1',
-    type: 'like',
-    user: {
-      id: '2',
-      name: 'Faraz Ahmed',
-      username: 'faraz_poet',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
-    },
-    post: {
-      id: '1',
-      title: 'Moonlit Whispers',
-    },
-    createdAt: '2 hours ago',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'comment',
-    user: {
-      id: '3',
-      name: 'Sara Khan',
-      username: 'sara_shayari',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
-    },
-    post: {
-      id: '2',
-      title: 'Dil Ki Baat',
-    },
-    comment: 'Beautiful expression of emotions!',
-    createdAt: '5 hours ago',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'follow',
-    user: {
-      id: '4',
-      name: 'Ali Hassan',
-      username: 'ali_verses',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
-    },
-    createdAt: '1 day ago',
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'like',
-    user: {
-      id: '3',
-      name: 'Sara Khan',
-      username: 'sara_shayari',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
-    },
-    post: {
-      id: '5',
-      title: 'Raat Ka Safar',
-    },
-    createdAt: '2 days ago',
-    read: true,
-  },
-];
-
 export function NotificationsPage({ onBack, onPostClick, onUserClick }: NotificationsPageProps) {
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await notificationsAPI.get();
+        if (mounted) setNotifications(res.notifications || []);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const NotificationIcon = ({ type }: { type: string }) => {
     switch (type) {
@@ -90,7 +43,7 @@ export function NotificationsPage({ onBack, onPostClick, onUserClick }: Notifica
     }
   };
 
-  const NotificationItem = ({ notification }: { notification: typeof mockNotifications[0] }) => {
+  const NotificationItem = ({ notification }: { notification: any }) => {
     return (
       <div
         className={`flex items-start gap-4 p-4 rounded-xl transition-colors ${
@@ -115,9 +68,7 @@ export function NotificationsPage({ onBack, onPostClick, onUserClick }: Notifica
                 >
                   <span>{notification.user.name}</span>
                 </button>
-                {notification.type === 'like' && ' liked your poem '}
                 {notification.type === 'comment' && ' commented on your poem '}
-                {notification.type === 'follow' && ' started following you'}
                 {notification.post && (
                   <button
                     onClick={() => onPostClick(notification.post.id)}
@@ -130,7 +81,7 @@ export function NotificationsPage({ onBack, onPostClick, onUserClick }: Notifica
               {notification.comment && (
                 <p className="text-gray-600 mt-1 text-sm">"{notification.comment}"</p>
               )}
-              <p className="text-sm text-gray-500 mt-1">{notification.createdAt}</p>
+              <p className="text-sm text-gray-500 mt-1">{new Date(notification.createdAt).toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -180,14 +131,28 @@ export function NotificationsPage({ onBack, onPostClick, onUserClick }: Notifica
           </TabsList>
 
           <TabsContent value="all" className="space-y-3">
-            {mockNotifications.map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
-            ))}
+            {loading ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                <p className="text-gray-500">Loading...</p>
+              </div>
+            ) : notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <NotificationItem key={notification.id} notification={notification} />
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                <p className="text-gray-500">No notifications yet</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="unread" className="space-y-3">
-            {mockNotifications.filter(n => !n.read).length > 0 ? (
-              mockNotifications
+            {loading ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                <p className="text-gray-500">Loading...</p>
+              </div>
+            ) : notifications.filter(n => !n.read).length > 0 ? (
+              notifications
                 .filter(n => !n.read)
                 .map((notification) => (
                   <NotificationItem key={notification.id} notification={notification} />

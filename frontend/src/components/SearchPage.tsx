@@ -120,7 +120,7 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
                         <div className="flex-1">
                           <p className="text-gray-900">{user.name}</p>
                           <p className="text-sm text-gray-600">@{user.username}</p>
-                          <p className="text-sm text-gray-500 mt-1">{user.followers} followers</p>
+                          <p className="text-sm text-gray-500 mt-1">{user._count?.followers ?? 0} followers</p>
                         </div>
                       </button>
                     ))}
@@ -191,7 +191,7 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
                       <div className="flex-1">
                         <p className="text-gray-900">{user.name}</p>
                         <p className="text-sm text-gray-600">@{user.username}</p>
-                        <p className="text-sm text-gray-500 mt-1">{user.followers} followers</p>
+                        <p className="text-sm text-gray-500 mt-1">{user._count?.followers ?? 0} followers</p>
                       </div>
                     </button>
                   ))

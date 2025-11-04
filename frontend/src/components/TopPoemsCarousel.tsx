@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Heart, Bookmark, Share2, Download } from 'lucide-react';
 import { Button } from './ui/button';
-import { mockPosts, getUserById } from '../data/mockData';
-import { toast } from 'sonner@2.0.3';
+import { postAPI } from '../utils/api';
+import { toast } from 'sonner';
 
 interface TopPoemsCarouselProps {
   onPostClick: (postId: string) => void;
@@ -10,11 +10,23 @@ interface TopPoemsCarouselProps {
 
 export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  
-  // Get top 5 poems by likes
-  const topPoems = [...mockPosts].sort((a, b) => b.likes - a.likes).slice(0, 5);
+  const [topPoems, setTopPoems] = useState<any[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await postAPI.getTopPosts();
+        if (mounted) setTopPoems(data);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const currentPoem = topPoems[currentIndex];
-  const author = currentPoem ? getUserById(currentPoem.userId) : null;
+  const author = currentPoem?.user;
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % topPoems.length);
@@ -95,9 +107,9 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
           {/* Poem Text - Urdu/Hindi style */}
           <div className="text-center mb-8">
             <p className="text-3xl text-white leading-relaxed mb-2 max-w-3xl mx-auto" style={{ fontFamily: 'serif' }}>
-              {currentPoem.content.split('\n').slice(0, 2).join('\n')}
+              {(currentPoem.content || '').split('\n').slice(0, 2).join('\n')}
             </p>
-            <p className="text-white/80 text-lg mt-4">{author.name}</p>
+            <p className="text-white/80 text-lg mt-4">{author?.name}</p>
           </div>
 
           {/* Actions */}
@@ -105,7 +117,7 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
             <div className="flex items-center gap-4">
               <button className="flex items-center gap-2 text-white hover:scale-110 transition-transform">
                 <Heart className="w-5 h-5 fill-white" />
-                <span>{currentPoem.likes}</span>
+                <span>{currentPoem.likesCount ?? currentPoem?._count?.likes ?? 0}</span>
               </button>
               <button className="text-white hover:scale-110 transition-transform">
                 <Bookmark className="w-5 h-5" />
@@ -116,7 +128,7 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
             </div>
 
             <Button
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation();
                 handleDownload();
               }}

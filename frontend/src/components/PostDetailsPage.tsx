@@ -1,11 +1,11 @@
 import { Heart, MessageCircle, Share2, Bookmark, ArrowLeft, Download } from 'lucide-react';
-import { getPostById, getUserById, getCommentsByPostId, mockPosts } from '../data/mockData';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { useState } from 'react';
-import { toast } from 'sonner@2.0.3';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { commentAPI, postAPI } from '../utils/api';
 
 interface PostDetailsPageProps {
   postId: string;
@@ -15,13 +15,33 @@ interface PostDetailsPageProps {
 }
 
 export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: PostDetailsPageProps) {
-  const post = getPostById(postId);
-  const user = post ? getUserById(post.userId) : null;
-  const comments = getCommentsByPostId(postId);
+  const [post, setPost] = useState<any | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState('');
-  const [isLiked, setIsLiked] = useState(post?.isLiked || false);
-  const [isSaved, setIsSaved] = useState(post?.isSaved || false);
-  const [likes, setLikes] = useState(post?.likes || 0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [likes, setLikes] = useState(0);
+
+  const user = post?.user || null;
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [p, cs, liked] = await Promise.all([
+          postAPI.getPost(postId),
+          commentAPI.getComments(postId),
+          postAPI.isLiked(postId),
+        ]);
+        if (!mounted) return;
+        setPost(p);
+        setComments(cs);
+        setIsLiked(!!liked?.liked);
+        setLikes(p?._count?.likes ?? 0);
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, [postId]);
 
   if (!post || !user) {
     return (
@@ -34,10 +54,20 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
   const handleLike = () => {
     setIsLiked(!isLiked);
     setLikes(isLiked ? likes - 1 : likes + 1);
+    (async () => {
+      try {
+        await postAPI.likePost(postId);
+      } catch {}
+    })();
   };
 
   const handleSave = () => {
     setIsSaved(!isSaved);
+    (async () => {
+      try {
+        await postAPI.savePost(postId);
+      } catch {}
+    })();
   };
 
   const handleDownloadImage = () => {
@@ -45,10 +75,7 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
     // In a real implementation, this would generate a beautiful image with the poem text
   };
 
-  // Get related posts (exclude current post)
-  const relatedPosts = mockPosts
-    .filter(p => p.id !== postId && p.genre === post.genre)
-    .slice(0, 3);
+  const relatedPosts: any[] = [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
@@ -104,7 +131,7 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
           </div>
 
           {/* Post Meta */}
-          <p className="text-gray-500 mb-6">{post.createdAt}</p>
+          <p className="text-gray-500 mb-6">{post.createdAt ? new Date(post.createdAt).toLocaleString() : ''}</p>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-4 pb-6 border-b border-gray-100">
@@ -155,33 +182,38 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
                 onChange={(e) => setCommentText(e.target.value)}
                 className="mb-3 min-h-[100px]"
               />
-              <Button className="bg-rose-500 hover:bg-rose-600 text-white">
+              <Button
+                className="bg-rose-500 hover:bg-rose-600 text-white"
+                onClick={async () => {
+                  if (!commentText.trim()) return;
+                  try {
+                    const created = await commentAPI.createComment(postId, commentText.trim());
+                    setComments(prev => [...prev, created]);
+                    setCommentText('');
+                  } catch {}
+                }}
+              >
                 Post Comment
               </Button>
             </div>
 
             {/* Comments List */}
             <div className="space-y-4">
-              {comments.map((comment) => {
-                const commentUser = getUserById(comment.userId);
-                if (!commentUser) return null;
-
-                return (
-                  <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 rounded-xl">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={commentUser.avatar} alt={commentUser.name} />
-                      <AvatarFallback>{commentUser.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-gray-900">{commentUser.name}</span>
-                        <span className="text-sm text-gray-500">· {comment.createdAt}</span>
-                      </div>
-                      <p className="text-gray-700">{comment.content}</p>
+              {comments.map((comment) => (
+                <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 rounded-xl">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={comment.user?.avatar || ''} alt={comment.user?.name || 'User'} />
+                    <AvatarFallback>{(comment.user?.name || 'U')[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-gray-900">{comment.user?.name || 'User'}</span>
+                      <span className="text-sm text-gray-500">· {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}</span>
                     </div>
+                    <p className="text-gray-700">{comment.content}</p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -193,26 +225,21 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
               Related Poems
             </h2>
             <div className="grid gap-4 md:grid-cols-3">
-              {relatedPosts.map((relatedPost) => {
-                const relatedUser = getUserById(relatedPost.userId);
-                if (!relatedUser) return null;
-
-                return (
-                  <button
-                    key={relatedPost.id}
-                    onClick={() => onPostClick(relatedPost.id)}
-                    className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all text-left"
-                  >
-                    <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-rose-200 mb-2">
-                      {relatedPost.genre}
-                    </Badge>
-                    <h3 className="text-lg text-gray-900 mb-2">
-                      {relatedPost.title}
-                    </h3>
-                    <p className="text-sm text-gray-600">by {relatedUser.name}</p>
-                  </button>
-                );
-              })}
+              {relatedPosts.map((relatedPost) => (
+                <button
+                  key={relatedPost.id}
+                  onClick={() => onPostClick(relatedPost.id)}
+                  className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all text-left"
+                >
+                  <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-rose-200 mb-2">
+                    {relatedPost.genre}
+                  </Badge>
+                  <h3 className="text-lg text-gray-900 mb-2">
+                    {relatedPost.title}
+                  </h3>
+                  <p className="text-sm text-gray-600">by {relatedPost.user?.name || 'User'}</p>
+                </button>
+              ))}
             </div>
           </div>
         )}

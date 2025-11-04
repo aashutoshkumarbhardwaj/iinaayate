@@ -1,11 +1,11 @@
 import { ArrowLeft, Star, Calendar, Share2, Heart, Bookmark } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { PostCard } from './PostCard';
-import { mockPosts, getUserById } from '../data/mockData';
+import { postAPI } from '../utils/api';
 
 interface DailyPoemPageProps {
   onBack: () => void;
@@ -14,17 +14,24 @@ interface DailyPoemPageProps {
 }
 
 export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPageProps) {
-  // Featured poem (highest likes)
-  const featuredPost = mockPosts.reduce((prev, current) =>
-    prev.likes > current.likes ? prev : current
-  );
-  const featuredAuthor = getUserById(featuredPost.userId);
-
+  const [topPosts, setTopPosts] = useState<any[]>([]);
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  // Previous featured poems
-  const previousFeatured = mockPosts.filter(p => p.id !== featuredPost.id).slice(0, 3);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await postAPI.getTopPosts();
+        if (mounted) setTopPosts(data);
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const featuredPost = topPosts[0];
+  const featuredAuthor = featuredPost?.user;
+  const previousFeatured = topPosts.slice(1, 4);
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -61,7 +68,7 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
         {/* Featured Poem Card */}
         <div className="bg-white rounded-3xl border-2 border-amber-200 shadow-2xl p-8 md:p-12 mb-12">
           {/* Author Info */}
-          {featuredAuthor && (
+          {featuredPost && featuredAuthor && (
             <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
               <button onClick={() => onUserClick(featuredAuthor.id)}>
                 <Avatar className="w-16 h-16 ring-2 ring-amber-200">
@@ -79,21 +86,25 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
                 <p className="text-gray-600">@{featuredAuthor.username}</p>
               </div>
               <Badge className="bg-amber-100 text-amber-800 border-amber-300">
-                {featuredPost.genre}
+                {featuredPost?.genre}
               </Badge>
             </div>
           )}
 
           {/* Poem Title */}
-          <h1 className="text-5xl text-center text-gray-900 mb-8 leading-tight">
-            {featuredPost.title}
-          </h1>
+          {featuredPost && (
+            <h1 className="text-5xl text-center text-gray-900 mb-8 leading-tight">
+              {featuredPost.title}
+            </h1>
+          )}
 
           {/* Poem Content */}
           <div className="max-w-2xl mx-auto">
-            <div className="text-2xl text-gray-800 leading-relaxed whitespace-pre-wrap text-center mb-8 font-serif">
-              {featuredPost.content}
-            </div>
+            {featuredPost && (
+              <div className="text-2xl text-gray-800 leading-relaxed whitespace-pre-wrap text-center mb-8 font-serif">
+                {featuredPost.content}
+              </div>
+            )}
           </div>
 
           <Separator className="my-8" />
@@ -106,7 +117,7 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
               className={`gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'}`}
             >
               <Heart className={`w-6 h-6 ${isLiked ? 'fill-rose-500' : ''}`} />
-              <span className="text-lg">{featuredPost.likes}</span>
+              <span className="text-lg">{featuredPost?.likesCount ?? featuredPost?._count?.likes ?? 0}</span>
             </Button>
             <Button variant="ghost" className="gap-2 text-gray-600">
               <Share2 className="w-6 h-6" />
@@ -125,7 +136,7 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
           {/* View Full */}
           <div className="text-center mt-8">
             <Button
-              onClick={() => onPostClick(featuredPost.id)}
+              onClick={() => featuredPost && onPostClick(featuredPost.id)}
               className="bg-gradient-to-r from-rose-500 to-purple-500 hover:from-rose-600 hover:to-purple-600 text-white"
             >
               View Full Poem & Comments

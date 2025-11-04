@@ -1,5 +1,5 @@
 import { ArrowLeft, User, Bell, Shield, Palette, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,6 +8,7 @@ import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { authAPI, userAPI } from '../utils/api';
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -16,12 +17,14 @@ interface SettingsPageProps {
 
 export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
   const [profile, setProfile] = useState({
-    name: 'Ayesha Rahman',
-    username: 'ayesha_writes',
-    email: 'ayesha@example.com',
-    bio: 'Poetry is the echo of the heart | Ghazal & Free Verse',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
+    name: '',
+    username: '',
+    email: '',
+    bio: '',
+    avatar: '',
   });
+  const [userId, setUserId] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
   const [notifications, setNotifications] = useState({
     likes: true,
@@ -32,8 +35,39 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
 
   const [theme, setTheme] = useState('light');
 
-  const handleSaveProfile = () => {
-    alert('Profile updated! 🎉');
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const me = await authAPI.me();
+        if (!me?.user?.id) return;
+        const id = me.user.id as string;
+        const data = await userAPI.getUser(id);
+        if (mounted) {
+          setUserId(id);
+          setProfile({
+            name: data.name || '',
+            username: data.username || '',
+            email: data.email || '',
+            bio: data.bio || '',
+            avatar: data.avatar || '',
+          });
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleSaveProfile = async () => {
+    if (!userId) return;
+    await userAPI.updateUser(userId, {
+      name: profile.name,
+      username: profile.username,
+      bio: profile.bio,
+      avatar: profile.avatar,
+    });
   };
 
   return (
@@ -190,7 +224,7 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
                   </div>
                   <Switch
                     checked={notifications.likes}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked: boolean) =>
                       setNotifications({ ...notifications, likes: checked })
                     }
                   />
@@ -205,7 +239,7 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
                   </div>
                   <Switch
                     checked={notifications.comments}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked: boolean) =>
                       setNotifications({ ...notifications, comments: checked })
                     }
                   />
@@ -220,7 +254,7 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
                   </div>
                   <Switch
                     checked={notifications.follows}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked: boolean) =>
                       setNotifications({ ...notifications, follows: checked })
                     }
                   />
@@ -235,7 +269,7 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
                   </div>
                   <Switch
                     checked={notifications.newsletter}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked: boolean) =>
                       setNotifications({ ...notifications, newsletter: checked })
                     }
                   />

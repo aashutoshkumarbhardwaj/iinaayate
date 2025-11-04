@@ -1,6 +1,4 @@
-import { projectId, publicAnonKey } from './supabase/info';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-f68befbc`;
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
 
 let authToken: string | null = null;
 
@@ -18,9 +16,11 @@ async function apiRequest(
 ): Promise<any> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken || publicAnonKey}`,
     ...options.headers,
   };
+  if (authToken) {
+    (headers as any)['Authorization'] = `Bearer ${authToken}`;
+  }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -43,12 +43,27 @@ export const authAPI = {
       body: JSON.stringify({ email, password, username, name }),
     });
   },
+
+  async login(email: string, password: string) {
+    return apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  async me() {
+    return apiRequest('/auth/me');
+  },
 };
 
 // User API
 export const userAPI = {
   async getUser(userId: string) {
     return apiRequest(`/users/${userId}`);
+  },
+
+  async getTopUsers() {
+    return apiRequest(`/users/top`);
   },
 
   async updateUser(userId: string, updates: any) {
@@ -88,6 +103,10 @@ export const postAPI = {
 
     const queryString = queryParams.toString();
     return apiRequest(`/posts${queryString ? `?${queryString}` : ''}`);
+  },
+
+  async getTopPosts() {
+    return apiRequest(`/posts/top`);
   },
 
   async getPost(postId: string) {
@@ -170,5 +189,64 @@ export const searchAPI = {
   async search(query: string, type: 'all' | 'posts' | 'users' = 'all') {
     const params = new URLSearchParams({ q: query, type });
     return apiRequest(`/search?${params.toString()}`);
+  },
+};
+
+// Notifications API
+export const notificationsAPI = {
+  async get() {
+    return apiRequest(`/notifications`);
+  },
+};
+
+// Help API
+export const helpAPI = {
+  async getTickets() {
+    return apiRequest(`/help/tickets`);
+  },
+  async createTicket(subject: string, message: string) {
+    return apiRequest(`/help/tickets`, {
+      method: 'POST',
+      body: JSON.stringify({ subject, message }),
+    });
+  },
+};
+
+// Store API
+export const storeAPI = {
+  async getProducts() {
+    return apiRequest(`/store/products`);
+  },
+  async createProduct(input: { title: string; description: string; price: number; image?: string; active?: boolean }) {
+    return apiRequest(`/store/products`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+};
+
+// Events API
+export const eventsAPI = {
+  async getEvents() {
+    return apiRequest(`/events`);
+  },
+  async getEvent(id: string) {
+    return apiRequest(`/events/${id}`);
+  },
+  async createEvent(input: { title: string; subtitle?: string; startsAt: string; location: string; poster?: string }) {
+    return apiRequest(`/events`, { method: 'POST', body: JSON.stringify(input) });
+  },
+};
+
+// Collections API
+export const collectionsAPI = {
+  async getCollections() {
+    return apiRequest(`/collections`);
+  },
+  async createCollection(input: { title: string; description?: string; isPublic?: boolean | 'public' | 'private' }) {
+    return apiRequest(`/collections`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   },
 };

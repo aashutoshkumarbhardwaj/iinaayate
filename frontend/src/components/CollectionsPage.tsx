@@ -1,5 +1,5 @@
 import { ArrowLeft, Plus, BookMarked, Lock, Globe } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -14,51 +14,12 @@ import {
 } from './ui/dialog';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { collectionsAPI } from '../utils/api';
 
 interface CollectionsPageProps {
   onBack: () => void;
   onCollectionClick: (collectionId: string) => void;
 }
-
-// Mock collections data
-const mockCollections = [
-  {
-    id: '1',
-    title: 'Heartbreak & Healing',
-    description: 'Poems about love lost and found',
-    poemCount: 12,
-    isPublic: true,
-    coverImage: 'https://images.unsplash.com/photo-1518893063132-36e46dbe2428?w=400&h=300&fit=crop',
-    createdAt: '2 weeks ago',
-  },
-  {
-    id: '2',
-    title: 'Nature\'s Symphony',
-    description: 'Beautiful verses celebrating the natural world',
-    poemCount: 8,
-    isPublic: true,
-    coverImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
-    createdAt: '1 month ago',
-  },
-  {
-    id: '3',
-    title: 'Midnight Musings',
-    description: 'Personal favorites for late-night reading',
-    poemCount: 15,
-    isPublic: false,
-    coverImage: 'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&h=300&fit=crop',
-    createdAt: '3 weeks ago',
-  },
-  {
-    id: '4',
-    title: 'Urdu Classics',
-    description: 'Timeless Urdu poetry and ghazals',
-    poemCount: 20,
-    isPublic: true,
-    coverImage: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop',
-    createdAt: '2 months ago',
-  },
-];
 
 export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPageProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -67,12 +28,32 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
     description: '',
     isPublic: 'public',
   });
+  const [collections, setCollections] = useState<any[]>([]);
 
-  const handleCreateCollection = () => {
-    console.log('Creating collection:', newCollection);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await collectionsAPI.getCollections();
+        if (mounted) setCollections(res.collections || []);
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleCreateCollection = async () => {
+    const isPublic = newCollection.isPublic === 'public' ? 'public' : 'private';
+    const created = await collectionsAPI.createCollection({
+      title: newCollection.title,
+      description: newCollection.description || undefined,
+      isPublic,
+    });
     setIsCreateDialogOpen(false);
     setNewCollection({ title: '', description: '', isPublic: 'public' });
-    alert('Collection created! 🎉');
+    setCollections((prev) => [
+      { id: created.id, title: created.title, description: created.description, isPublic: created.isPublic, createdAt: created.createdAt, itemCount: 0 },
+      ...prev,
+    ]);
   };
 
   return (
@@ -143,7 +124,7 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
                     <Label>Privacy</Label>
                     <RadioGroup
                       value={newCollection.isPublic}
-                      onValueChange={(value) =>
+                      onValueChange={(value: string) =>
                         setNewCollection({ ...newCollection, isPublic: value })
                       }
                       className="mt-2"
@@ -188,52 +169,44 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
 
         {/* Collections Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockCollections.map((collection) => (
+          {collections.map((collection) => (
             <button
               key={collection.id}
               onClick={() => onCollectionClick(collection.id)}
               className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all text-left"
             >
-              {/* Cover Image */}
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={collection.coverImage}
-                  alt={collection.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary" className="bg-white/90 text-gray-900">
-                      {collection.poemCount} poems
-                    </Badge>
-                    {collection.isPublic ? (
-                      <Badge variant="secondary" className="bg-blue-500/90 text-white">
-                        <Globe className="w-3 h-3 mr-1" />
-                        Public
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-gray-500/90 text-white">
-                        <Lock className="w-3 h-3 mr-1" />
-                        Private
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Collection Info */}
-              <div className="p-5">
-                <div className="flex items-start gap-2 mb-2">
-                  <BookMarked className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-                  <h3 className="text-lg text-gray-900 group-hover:text-rose-600 transition-colors">
+              {/* Cover Section */}
+              <div className="relative h-48 overflow-hidden bg-gradient-to-br from-rose-50 to-purple-50 flex items-center justify-center p-6">
+                <div className="text-center">
+                  <Badge variant="secondary" className="bg-white/90 text-gray-900 mb-2">
+                    {collection.itemCount} items
+                  </Badge>
+                  <h3 className="text-lg text-gray-900 group-hover:text-rose-600 transition-colors line-clamp-2">
                     {collection.title}
                   </h3>
                 </div>
-                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                  {collection.description}
-                </p>
-                <p className="text-xs text-gray-500">Created {collection.createdAt}</p>
+              </div>
+
+              {/* Info */}
+              <div className="p-5">
+                <div className="flex items-start gap-2 mb-2">
+                  <BookMarked className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-600 line-clamp-2">{collection.description || '—'}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                      {collection.isPublic ? (
+                        <Badge variant="secondary" className="bg-blue-500/90 text-white">
+                          <Globe className="w-3 h-3 mr-1" /> Public
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-gray-500/90 text-white">
+                          <Lock className="w-3 h-3 mr-1" /> Private
+                        </Badge>
+                      )}
+                      <span>Created {new Date(collection.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </button>
           ))}
@@ -254,7 +227,7 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
         </div>
 
         {/* Empty State */}
-        {mockCollections.length === 0 && (
+        {collections.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
             <BookMarked className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl text-gray-900 mb-2">

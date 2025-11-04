@@ -1,5 +1,6 @@
 import { TrendingUp, Users, Hash, Star, Headphones, Compass, Mic2, ChevronDown, ShoppingBag, Feather } from 'lucide-react';
-import { mockPosts, mockUsers, genres } from '../data/mockData';
+import { useEffect, useMemo, useState } from 'react';
+import { postAPI, userAPI } from '../utils/api';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -14,11 +15,41 @@ interface ExplorePageProps {
 }
 
 export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavigate }: ExplorePageProps) {
-  // Sort posts by likes for trending
-  const trendingPosts = [...mockPosts].sort((a, b) => b.likes - a.likes).slice(0, 5);
-  
-  // Sort users by followers for top authors
-  const topAuthors = [...mockUsers].sort((a, b) => b.followers - a.followers);
+  const [trendingPosts, setTrendingPosts] = useState<any[]>([]);
+  const [feedPosts, setFeedPosts] = useState<any[]>([]);
+  const [topAuthors, setTopAuthors] = useState<any[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [topPosts, feed, users] = await Promise.all([
+          postAPI.getTopPosts(),
+          postAPI.getPosts({ limit: 100 }),
+          userAPI.getTopUsers(),
+        ]);
+        if (mounted) {
+          setTrendingPosts(topPosts);
+          setFeedPosts(feed);
+          setTopAuthors(users);
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const genres = useMemo(() => {
+    const map = new Map<string, { count: number; totalLikes: number }>();
+    for (const p of feedPosts) {
+      const key = p.genre || 'Other';
+      const likes = p._count?.likes ?? 0;
+      const entry = map.get(key) || { count: 0, totalLikes: 0 };
+      entry.count += 1;
+      entry.totalLikes += likes;
+      map.set(key, entry);
+    }
+    return Array.from(map.entries()).map(([name, stats]) => ({ name, ...stats }));
+  }, [feedPosts]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
@@ -171,30 +202,25 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
 
               <TabsContent value="genres">
                 <div className="grid md:grid-cols-2 gap-4">
-                  {genres.map((genre) => {
-                    const genrePosts = mockPosts.filter(p => p.genre === genre);
-                    const totalLikes = genrePosts.reduce((sum, p) => sum + p.likes, 0);
-                    
-                    return (
-                      <button
-                        key={genre}
-                        className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all text-left group"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-rose-200">
-                            {genre}
-                          </Badge>
-                          <Hash className="w-5 h-5 text-gray-400 group-hover:text-rose-400 transition-colors" />
-                        </div>
-                        <p className="text-gray-600 mb-2">
-                          {genrePosts.length} poems
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {totalLikes} total likes
-                        </p>
-                      </button>
-                    );
-                  })}
+                  {genres.map((g) => (
+                    <button
+                      key={g.name}
+                      className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all text-left group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-rose-200">
+                          {g.name}
+                        </Badge>
+                        <Hash className="w-5 h-5 text-gray-400 group-hover:text-rose-400 transition-colors" />
+                      </div>
+                      <p className="text-gray-600 mb-2">
+                        {g.count} poems
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {g.totalLikes} total likes
+                      </p>
+                    </button>
+                  ))}
                 </div>
               </TabsContent>
             </Tabs>

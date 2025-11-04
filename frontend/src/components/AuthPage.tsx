@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { authAPI, setAuthToken } from '../utils/api';
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -12,14 +13,48 @@ interface AuthPageProps {
 export function AuthPage({ onAuth }: AuthPageProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const email = (form.querySelector('#login-email') as HTMLInputElement)?.value;
+    const password = (form.querySelector('#login-password') as HTMLInputElement)?.value;
+    if (!email || !password) return;
     setIsLoading(true);
-    // Simulate authentication
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await authAPI.login(email, password);
+      const token = res.token as string;
+      setAuthToken(token);
+      localStorage.setItem('authToken', token);
+      if (res.user?.id) localStorage.setItem('currentUserId', res.user.id);
       onAuth();
-    }, 1000);
+    } catch {
+      // ignore for now
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const username = (form.querySelector('#signup-username') as HTMLInputElement)?.value;
+    const name = username; // if name field not present, reuse username
+    const email = (form.querySelector('#signup-email') as HTMLInputElement)?.value;
+    const password = (form.querySelector('#signup-password') as HTMLInputElement)?.value;
+    if (!email || !password || !username) return;
+    setIsLoading(true);
+    try {
+      const res = await authAPI.signup(email, password, username, name);
+      const token = res.token as string;
+      setAuthToken(token);
+      localStorage.setItem('authToken', token);
+      if (res.user?.id) localStorage.setItem('currentUserId', res.user.id);
+      onAuth();
+    } catch {
+      // ignore for now
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
@@ -76,7 +111,7 @@ export function AuthPage({ onAuth }: AuthPageProps) {
             </TabsList>
 
             <TabsContent value="login">
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleLogin} className="space-y-5">
                 <div>
                   <Label htmlFor="login-email" className="text-gray-700">Email</Label>
                   <Input
@@ -150,7 +185,7 @@ export function AuthPage({ onAuth }: AuthPageProps) {
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSignup} className="space-y-5">
                 <div>
                   <Label htmlFor="signup-username" className="text-gray-700">Username</Label>
                   <Input

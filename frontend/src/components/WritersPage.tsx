@@ -1,7 +1,6 @@
 import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from './ui/button';
-import { mockUsers } from '../data/mockData';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import {
   Select,
@@ -10,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { userAPI } from '../utils/api';
 
 interface WritersPageProps {
   onBack: () => void;
@@ -18,29 +18,33 @@ interface WritersPageProps {
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-// Extended writer data with poem counts
-const writersData = mockUsers.map((user, index) => ({
-  ...user,
-  sherCount: Math.floor(Math.random() * 100) + 5,
-  ghazalCount: Math.floor(Math.random() * 50) + 1,
-  nazmCount: Math.floor(Math.random() * 30) + 1,
-}));
-
 export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
   const [sortBy, setSortBy] = useState('popularity');
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [writers, setWriters] = useState<any[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const users = await userAPI.getTopUsers();
+        if (mounted) setWriters(users);
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Filter writers by selected letter
   const filteredWriters = selectedLetter
-    ? writersData.filter((writer) =>
+    ? writers.filter((writer) =>
         writer.name.toUpperCase().startsWith(selectedLetter)
       )
-    : writersData;
+    : writers;
 
   // Sort writers
   const sortedWriters = [...filteredWriters].sort((a, b) => {
     if (sortBy === 'popularity') {
-      return b.followers - a.followers;
+      return (b.followersCount ?? 0) - (a.followersCount ?? 0);
     } else if (sortBy === 'name') {
       return a.name.localeCompare(b.name);
     }
@@ -58,7 +62,7 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+    <div className="min-h-screen bg-gradient-to-b from-accent/10 via-background to-secondary/10">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <Button variant="ghost" onClick={onBack} className="mb-6 -ml-2">
@@ -67,8 +71,8 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
         </Button>
 
         <div className="text-center mb-12">
-          <h1 className="text-5xl text-gray-900 mb-3">Writers</h1>
-          <p className="text-lg text-gray-600">
+          <h1 className="text-5xl font-serif text-foreground mb-3">Writers</h1>
+          <p className="text-lg text-muted-foreground">
             Discover talented poets and their beautiful works
           </p>
         </div>
@@ -76,8 +80,8 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           {/* Sort By */}
-          <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-4 py-3">
-            <span className="text-gray-700">Sort By :</span>
+          <div className="flex items-center gap-3 bg-accent/20 rounded-xl px-4 py-3">
+            <span className="text-foreground">Sort By :</span>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[140px] border-0 bg-transparent">
                 <SelectValue />
@@ -90,10 +94,7 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
           </div>
 
           {/* Filter by Letter */}
-          <Button
-            variant="outline"
-            className="bg-gray-100 border-gray-200 rounded-xl"
-          >
+          <Button variant="outline" className="bg-accent/20 border-border rounded-xl">
             <SlidersHorizontal className="w-4 h-4 mr-2" />
             Filter by letter
           </Button>
@@ -105,8 +106,8 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
             onClick={() => setSelectedLetter(null)}
             className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
               !selectedLetter
-                ? 'bg-rose-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-accent/20 text-foreground hover:bg-accent/30'
             }`}
           >
             All
@@ -117,8 +118,8 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
               onClick={() => setSelectedLetter(letter)}
               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 selectedLetter === letter
-                  ? 'bg-rose-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-accent/20 text-foreground hover:bg-accent/30'
               }`}
             >
               {letter}
@@ -140,35 +141,24 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
               <div className="mb-4">
                 <Avatar className="w-full h-48 rounded-xl ring-2 ring-white group-hover:ring-4 transition-all">
                   <AvatarImage
-                    src={writer.avatar}
+                    src={writer.avatar || ''}
                     alt={writer.name}
                     className="object-cover"
                   />
                   <AvatarFallback className="text-4xl">
-                    {writer.name[0]}
+                    {(writer.name || 'U')[0]}
                   </AvatarFallback>
                 </Avatar>
               </div>
 
               {/* Writer Name */}
-              <h3 className="text-xl text-gray-900 mb-3 group-hover:text-rose-600 transition-colors">
+              <h3 className="text-xl font-serif text-foreground mb-3 group-hover:text-primary transition-colors">
                 {writer.name}
               </h3>
 
-              {/* Poem Counts */}
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <div className="text-center">
-                  <p className="text-lg text-gray-900">{writer.sherCount}</p>
-                  <p>Sher</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg text-gray-900">{writer.ghazalCount}</p>
-                  <p>Ghazal</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg text-gray-900">{writer.nazmCount}</p>
-                  <p>Nazm</p>
-                </div>
+              {/* Followers */}
+              <div className="text-sm text-muted-foreground">
+                <p className="text-foreground/80">{writer.followersCount ?? 0} followers</p>
               </div>
             </button>
           ))}
@@ -177,38 +167,35 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
         {/* Load More */}
         {sortedWriters.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No writers found with this filter</p>
+            <p className="text-muted-foreground">No writers found with this filter</p>
           </div>
         )}
 
         {sortedWriters.length > 0 && (
           <div className="text-center mb-16">
-            <Button
-              variant="outline"
-              className="border-rose-200 text-rose-600 hover:bg-rose-50"
-            >
+            <Button variant="outline" className="border-border text-foreground hover:bg-accent/20">
               Load more writers
             </Button>
           </div>
         )}
 
         {/* Become a Writer CTA */}
-        <div className="bg-gradient-to-br from-purple-50 via-rose-50 to-amber-50 rounded-2xl p-12 text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-accent/20 via-secondary/20 to-cta/20 rounded-2xl p-12 text-center relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <svg className="w-full h-full" viewBox="0 0 400 400">
-              <path d="M200 50 L250 150 L350 150 L270 210 L300 310 L200 250 L100 310 L130 210 L50 150 L150 150 Z" fill="currentColor" className="text-purple-600" />
+              <path d="M200 50 L250 150 L350 150 L270 210 L300 310 L200 250 L100 310 L130 210 L50 150 L150 150 Z" fill="currentColor" className="text-primary" />
             </svg>
           </div>
           
           <div className="relative z-10">
-            <h3 className="text-3xl text-gray-900 mb-4">
+            <h3 className="text-3xl font-serif text-foreground mb-4">
               Share Your Poetry with the World
             </h3>
-            <p className="text-gray-700 mb-8 max-w-2xl mx-auto text-lg">
+            <p className="text-foreground/80 mb-8 max-w-2xl mx-auto text-lg">
               Join thousands of poets on Inayate. Share your ghazals, shers, and nazms with 
               a community that appreciates beautiful words.
             </p>
-            <Button className="bg-rose-500 hover:bg-rose-600 text-white">
+            <Button className="bg-cta text-cta-foreground hover:brightness-95">
               Start Writing
             </Button>
           </div>

@@ -1,7 +1,6 @@
 import { ArrowLeft, MapPin, Calendar, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Post } from '../data/mockData';
-import { supabase } from '../utils/supabase/client';
+import { postAPI, userAPI } from '../utils/api';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -14,45 +13,11 @@ interface UserProfilePageProps {
   onUserClick: (userId: string) => void;
 }
 
-
-// Fetch user details from Supabase
-const fetchUser = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-// Fetch posts by user from Supabase
-const fetchUserPosts = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*')
-    .eq('userId', userId)
-    .order('createdAt', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data || [];
-};
-
-// Fetch saved posts for the user
-const fetchSavedPosts = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*')
-    .eq('isSaved', true)
-    .eq('userId', userId)
-    .order('createdAt', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data || [];
-};
-
 export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: UserProfilePageProps) {
   const [user, setUser] = useState<any>(null);
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
-  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [savedPosts, setSavedPosts] = useState<any[]>([]);
+  const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,16 +27,19 @@ export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: Us
       setError(null);
       try {
         const [userData, userPostsData, savedPostsData] = await Promise.all([
-          fetchUser(userId),
-          fetchUserPosts(userId),
-          fetchSavedPosts(userId),
+          userAPI.getUser(userId),
+          postAPI.getPosts({ userId }),
+          postAPI.getSavedPosts(),
         ]);
+        let following: any = null;
+        try { following = await userAPI.isFollowing(userId); } catch {}
         if (!userData) {
           setError('User not found');
         } else {
           setUser(userData);
           setUserPosts(userPostsData);
           setSavedPosts(savedPostsData);
+          setIsFollowing(!!following?.following);
         }
       } catch (err) {
         setError('Failed to load profile data.');
@@ -138,8 +106,21 @@ export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: Us
                   </h1>
                   <p className="text-gray-600">@{user.username}</p>
                 </div>
-                <Button className="bg-rose-500 hover:bg-rose-600 text-white">
-                  Follow
+                <Button
+                  className="bg-rose-500 hover:bg-rose-600 text-white"
+                  onClick={async () => {
+                    try {
+                      if (isFollowing) {
+                        await userAPI.unfollow(userId);
+                        setIsFollowing(false);
+                      } else {
+                        await userAPI.follow(userId);
+                        setIsFollowing(true);
+                      }
+                    } catch {}
+                  }}
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
                 </Button>
               </div>
 
@@ -165,12 +146,8 @@ export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: Us
                   <span className="text-gray-600">Poems</span>
                 </div>
                 <div>
-                  <span className="text-gray-900 mr-1">{user.followers ?? 0}</span>
+                  <span className="text-gray-900 mr-1">{user._count?.followers ?? 0}</span>
                   <span className="text-gray-600">Followers</span>
-                </div>
-                <div>
-                  <span className="text-gray-900 mr-1">{user.following ?? 0}</span>
-                  <span className="text-gray-600">Following</span>
                 </div>
               </div>
             </div>

@@ -96,6 +96,7 @@ export default function App() {
         <HomePage
           onPostClick={handlePostClick}
           onUserClick={handleUserClick}
+          onNavigate={handleNavigate}
         />
       )}
 

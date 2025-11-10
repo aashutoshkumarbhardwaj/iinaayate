@@ -29,6 +29,8 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
     isPublic: 'public',
   });
   const [collections, setCollections] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
 
   useEffect(() => {
     let mounted = true;
@@ -56,28 +58,28 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
     ]);
   };
 
+  const coverFor = (title: string) => {
+    const seed = encodeURIComponent(title || 'poetry');
+    return `https://source.unsplash.com/600x800/?poetry,${seed}`;
+  };
+
+  const totalPages = Math.max(1, Math.ceil(collections.length / pageSize));
+  const start = (page - 1) * pageSize;
+  const pageItems = collections.slice(start, start + pageSize);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="mb-4 -ml-2"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+          <Button variant="ghost" onClick={onBack} className="mb-4 -ml-2">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl text-gray-900 mb-2">
-                My Collections
-              </h1>
-              <p className="text-gray-600">
-                Organize and curate your favorite poems
-              </p>
+              <h1 className="text-5xl font-semibold text-gray-900 mb-1">Poetry Collections</h1>
+              <p className="text-gray-600">Journeys through verse, curated for the soul.</p>
             </div>
 
             {/* Create Collection Dialog */}
@@ -168,45 +170,24 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
         </div>
 
         {/* Collections Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {collections.map((collection) => (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-7">
+          {pageItems.map((collection) => (
             <button
               key={collection.id}
               onClick={() => onCollectionClick(collection.id)}
-              className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all text-left"
+              className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl hover:-translate-y-0.5 transition-all text-left bg-gray-100 ring-1 ring-black/5"
+              style={{ aspectRatio: '3 / 4', WebkitTapHighlightColor: 'transparent' }}
             >
-              {/* Cover Section */}
-              <div className="relative h-48 overflow-hidden bg-gradient-to-br from-rose-50 to-purple-50 flex items-center justify-center p-6">
-                <div className="text-center">
-                  <Badge variant="secondary" className="bg-white/90 text-gray-900 mb-2">
-                    {collection.itemCount} items
-                  </Badge>
-                  <h3 className="text-lg text-gray-900 group-hover:text-rose-600 transition-colors line-clamp-2">
-                    {collection.title}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Info */}
-              <div className="p-5">
-                <div className="flex items-start gap-2 mb-2">
-                  <BookMarked className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-600 line-clamp-2">{collection.description || '—'}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                      {collection.isPublic ? (
-                        <Badge variant="secondary" className="bg-blue-500/90 text-white">
-                          <Globe className="w-3 h-3 mr-1" /> Public
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-gray-500/90 text-white">
-                          <Lock className="w-3 h-3 mr-1" /> Private
-                        </Badge>
-                      )}
-                      <span>Created {new Date(collection.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
+              <img
+                src={coverFor(collection.title)}
+                alt={collection.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-5">
+                <h3 className="text-white text-lg font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">{collection.title}</h3>
+                <p className="text-white/85 text-sm">A Collection by Inayati</p>
               </div>
             </button>
           ))}
@@ -225,6 +206,41 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
             </p>
           </button>
         </div>
+
+        {/* Pagination */}
+        {collections.length > pageSize && (
+          <div className="flex items-center justify-center gap-3 mt-10">
+            <button
+              className="px-3 py-1.5 text-gray-500 hover:text-gray-700 rounded-full border border-gray-200 bg-white"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              aria-label="Previous page"
+            >
+              ‹
+            </button>
+            {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
+              const n = i + 1;
+              return (
+                <button
+                  key={n}
+                  onClick={() => setPage(n)}
+                  className={`w-9 h-9 rounded-full text-sm font-medium ${page === n ? 'bg-rose-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  {n}
+                </button>
+              );
+            })}
+            {totalPages > 5 && <span className="px-2 text-gray-500">…</span>}
+            <button
+              className="px-3 py-1.5 text-gray-500 hover:text-gray-700 rounded-full border border-gray-200 bg-white"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              aria-label="Next page"
+            >
+              ›
+            </button>
+          </div>
+        )}
 
         {/* Empty State */}
         {collections.length === 0 && (

@@ -228,7 +228,9 @@ export const storeAPI = {
 // Events API
 export const eventsAPI = {
   async getEvents() {
-    return apiRequest(`/events`);
+    const data = await apiRequest(`/events`);
+    const events = Array.isArray(data) ? data : (data?.events ?? []);
+    return { events };
   },
   async getEvent(id: string) {
     return apiRequest(`/events/${id}`);

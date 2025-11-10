@@ -11,6 +11,7 @@ interface TopPoemsCarouselProps {
 export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [topPoems, setTopPoems] = useState<any[]>([]);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -29,12 +30,22 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
   const author = currentPoem?.user;
 
   const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % topPoems.length);
+    setCurrentIndex((prev) => (topPoems.length ? (prev + 1) % topPoems.length : 0));
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + topPoems.length) % topPoems.length);
+    setCurrentIndex((prev) => (topPoems.length ? (prev - 1 + topPoems.length) % topPoems.length : 0));
   };
+
+  // Autoplay with pause on hover
+  useEffect(() => {
+    if (!topPoems.length) return;
+    if (isHovered) return;
+    const id = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % topPoems.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [topPoems.length, isHovered]);
 
   const handleDownload = () => {
     toast.success('Poem image downloaded! 🎨');
@@ -52,7 +63,7 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
   ];
 
   return (
-    <div className="mb-12">
+    <div className="mb-12" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl text-gray-900">Today's top 5</h2>
         <div className="flex gap-2">

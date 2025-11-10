@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
 import { PostCard } from './PostCard';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { searchAPI } from '../utils/api';
+import { postAPI, searchAPI, userAPI } from '../utils/api';
 
 interface SearchPageProps {
   initialQuery?: string;
@@ -19,12 +19,42 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
   const [results, setResults] = useState<{ posts: any[]; users: any[] }>({ posts: [], users: [] });
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [topPosts, setTopPosts] = useState<any[]>([]);
+  const [topIndex, setTopIndex] = useState(0);
+  const [topHover, setTopHover] = useState(false);
+  const [featuredPoets, setFeaturedPoets] = useState<any[]>([]);
 
   useEffect(() => {
     if (initialQuery) {
       handleSearch(initialQuery);
     }
   }, [initialQuery]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [top, poets] = await Promise.all([
+          postAPI.getTopPosts(),
+          userAPI.getTopUsers(),
+        ]);
+        if (mounted) {
+          setTopPosts(top || []);
+          setFeaturedPoets(poets || []);
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!topPosts.length) return;
+    if (topHover) return;
+    const id = setInterval(() => {
+      setTopIndex((prev) => (prev + 1) % topPosts.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [topPosts.length, topHover]);
 
   const handleSearch = async (searchQuery: string = query) => {
     if (!searchQuery.trim()) return;
@@ -49,7 +79,7 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <Button
@@ -79,6 +109,69 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
             />
           </div>
         </div>
+
+        {/* Explore-like header content */}
+        {(topPosts.length > 0 || featuredPoets.length > 0) && (
+          <div className="mb-10">
+            {topPosts.length > 0 && (
+              <div className="mb-8" onMouseEnter={() => setTopHover(true)} onMouseLeave={() => setTopHover(false)}>
+                <div className="text-center mb-4">
+                  <p className="uppercase tracking-[0.3em] text-xs text-gray-500">Today’s Top Shayari</p>
+                </div>
+                {(() => {
+                  const p = topPosts[topIndex];
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => onPostClick(p.id)}
+                      className="block w-full text-center group"
+                    >
+                      <div className="text-2xl text-gray-900 leading-relaxed whitespace-pre-wrap group-hover:text-rose-600 transition-colors" style={{ fontFamily: 'serif' }}>
+                        {(p.content || '').split('\n').slice(0, 2).join('\n')}
+                      </div>
+                      <div className="mt-3 text-gray-500 text-sm tracking-wide">{p.user?.name}</div>
+                    </button>
+                  );
+                })()}
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  {topPosts.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setTopIndex(i)}
+                      className={`h-1.5 rounded-full transition-all ${i === topIndex ? 'w-6 bg-rose-500' : 'w-2.5 bg-gray-300'}`}
+                      aria-label={`Go to shayari ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {featuredPoets.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl text-gray-900">Featured Poets</h2>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                  {featuredPoets.slice(0, 12).map((poet: any) => (
+                    <button
+                      key={poet.id}
+                      onClick={() => onUserClick(poet.id)}
+                      className="flex flex-col items-center group"
+                    >
+                      <Avatar className="w-16 h-16 mb-2 ring-2 ring-rose-100 group-hover:ring-rose-300 transition-all">
+                        <AvatarImage src={poet.avatar || ''} alt={poet.name} />
+                        <AvatarFallback>{(poet.name || 'U')[0]}</AvatarFallback>
+                      </Avatar>
+                      <p className="text-xs text-gray-900 text-center truncate w-full group-hover:text-rose-600 transition-colors">
+                        {(poet.name || '').split(' ')[0]}...
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Results */}
         {isSearching ? (

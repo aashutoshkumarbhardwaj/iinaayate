@@ -94,12 +94,14 @@ export const userAPI = {
 
 // Post API
 export const postAPI = {
-  async getPosts(params?: { limit?: number; offset?: number; genre?: string; userId?: string }) {
+  async getPosts(params?: { limit?: number; offset?: number; genre?: string; userId?: string; mood?: string; hasAudio?: boolean }) {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.set('limit', params.limit.toString());
     if (params?.offset) queryParams.set('offset', params.offset.toString());
     if (params?.genre) queryParams.set('genre', params.genre);
     if (params?.userId) queryParams.set('userId', params.userId);
+    if (params?.mood) queryParams.set('mood', params.mood);
+    if (params?.hasAudio) queryParams.set('hasAudio', 'true');
 
     const queryString = queryParams.toString();
     return apiRequest(`/posts${queryString ? `?${queryString}` : ''}`);
@@ -113,10 +115,10 @@ export const postAPI = {
     return apiRequest(`/posts/${postId}`);
   },
 
-  async createPost(title: string, content: string, genre: string) {
+  async createPost(title: string, content: string, genre: string, extras?: { mood?: string; audioUrl?: string }) {
     return apiRequest('/posts', {
       method: 'POST',
-      body: JSON.stringify({ title, content, genre }),
+      body: JSON.stringify({ title, content, genre, ...(extras || {}) }),
     });
   },
 
@@ -196,6 +198,19 @@ export const searchAPI = {
 export const notificationsAPI = {
   async get() {
     return apiRequest(`/notifications`);
+  },
+};
+
+// Stats API
+export const statsAPI = {
+  async getCommunity() {
+    return apiRequest(`/stats/community`);
+  },
+};
+
+export const moodsAPI = {
+  async get() {
+    return apiRequest('/posts/moods');
   },
 };
 

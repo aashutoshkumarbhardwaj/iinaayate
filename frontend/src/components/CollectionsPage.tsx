@@ -45,17 +45,18 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
 
   const handleCreateCollection = async () => {
     const isPublic = newCollection.isPublic === 'public' ? 'public' : 'private';
-    const created = await collectionsAPI.createCollection({
+    await collectionsAPI.createCollection({
       title: newCollection.title,
       description: newCollection.description || undefined,
       isPublic,
     });
     setIsCreateDialogOpen(false);
     setNewCollection({ title: '', description: '', isPublic: 'public' });
-    setCollections((prev) => [
-      { id: created.id, title: created.title, description: created.description, isPublic: created.isPublic, createdAt: created.createdAt, itemCount: 0 },
-      ...prev,
-    ]);
+    // Refresh to include ownerName and accurate counts from API
+    try {
+      const res = await collectionsAPI.getCollections();
+      setCollections(res.collections || []);
+    } catch {}
   };
 
   const coverFor = (title: string) => {
@@ -187,7 +188,7 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5">
                 <h3 className="text-white text-lg font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">{collection.title}</h3>
-                <p className="text-white/85 text-sm">A Collection by Inayati</p>
+                <p className="text-white/85 text-sm">{collection.ownerName ? `A Collection by ${collection.ownerName}` : ''}</p>
               </div>
             </button>
           ))}

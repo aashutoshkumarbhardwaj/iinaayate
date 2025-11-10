@@ -38,7 +38,7 @@ export function Navigation({ currentPage, onNavigate, onLogout }: NavigationProp
           >
             <Heart className="w-6 h-6 text-accent fill-accent" />
             <span className="text-2xl tracking-tight text-foreground font-serif group-hover:text-primary transition-colors">
-              Inayate
+              iinaayate
             </span>
           </button>
 

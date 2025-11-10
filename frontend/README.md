@@ -1,7 +1,7 @@
 
-  # Inayate Poetry Sharing App
+  # iinaayate Poetry Sharing App
 
-  This is a code bundle for Inayate Poetry Sharing App. The original project is available at https://www.figma.com/design/5DBp0StjGHJocGp5lLamFM/Inayate-Poetry-Sharing-App.
+  This is a code bundle for iinaayate Poetry Sharing App. The original project is available at https://www.figma.com/design/5DBp0StjGHJocGp5lLamFM/iinaayate-Poetry-Sharing-App.
 
   ## Running the code
 

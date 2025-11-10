@@ -34,6 +34,10 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
   });
 
   const [theme, setTheme] = useState('light');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showAvatarInput, setShowAvatarInput] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -62,12 +66,31 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
 
   const handleSaveProfile = async () => {
     if (!userId) return;
-    await userAPI.updateUser(userId, {
-      name: profile.name,
-      username: profile.username,
-      bio: profile.bio,
-      avatar: profile.avatar,
-    });
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await userAPI.updateUser(userId, {
+        name: profile.name,
+        username: profile.username,
+        bio: profile.bio,
+        avatar: profile.avatar,
+      });
+      // Re-fetch to ensure UI matches DB
+      const fresh = await userAPI.getUser(userId);
+      setProfile({
+        name: fresh.name || '',
+        username: fresh.username || '',
+        email: fresh.email || '',
+        bio: fresh.bio || '',
+        avatar: fresh.avatar || '',
+      });
+      setSuccess('Profile updated successfully.');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -88,6 +111,18 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
             Settings
           </h1>
         </div>
+
+        {/* Feedback */}
+        {(error || success) && (
+          <div className="mb-4">
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-2">{error}</div>
+            )}
+            {success && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-2">{success}</div>
+            )}
+          </div>
+        )}
 
         {/* Settings Content */}
         <Tabs defaultValue="profile" className="w-full">
@@ -121,13 +156,26 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
               <div className="flex items-center gap-6 mb-6">
                 <Avatar className="w-24 h-24 ring-2 ring-rose-100">
                   <AvatarImage src={profile.avatar} alt={profile.name} />
-                  <AvatarFallback>{profile.name[0]}</AvatarFallback>
+                  <AvatarFallback>{profile.name?.[0] ?? 'U'}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button variant="outline" size="sm" className="mb-2">
-                    Change Avatar
+                  <Button variant="outline" size="sm" className="mb-2" onClick={() => setShowAvatarInput((v) => !v)}>
+                    {showAvatarInput ? 'Hide' : 'Change Avatar'}
                   </Button>
-                  <p className="text-sm text-gray-500">JPG, PNG or GIF. Max 2MB.</p>
+                  <p className="text-sm text-gray-500">Paste an image URL for now (DB stored). File uploads can be added later.</p>
+                  {showAvatarInput && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Input
+                        placeholder="https://..."
+                        value={profile.avatar}
+                        onChange={(e) => setProfile({ ...profile, avatar: e.target.value })}
+                        className="flex-1"
+                      />
+                      <Button size="sm" onClick={handleSaveProfile} disabled={saving}>
+                        Save
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -195,11 +243,8 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={handleSaveProfile}
-                    className="bg-rose-500 hover:bg-rose-600 text-white"
-                  >
-                    Save Changes
+                  <Button onClick={handleSaveProfile} disabled={saving} className="bg-rose-500 hover:bg-rose-600 text-white">
+                    {saving ? 'Saving…' : 'Save Changes'}
                   </Button>
                   <Button variant="outline">
                     Cancel

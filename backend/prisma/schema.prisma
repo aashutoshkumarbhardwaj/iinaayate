@@ -34,6 +34,8 @@ model Post {
   title     String
   content   String
   genre     String
+  mood      String?
+  audioUrl  String?
   createdAt DateTime @default(now())
 
   comments        Comment[]

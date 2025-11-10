@@ -15,17 +15,21 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       description: true,
       isPublic: true,
       createdAt: true,
+      user: { select: { name: true } },
       _count: { select: { items: true } },
     },
   });
-  res.json({ collections: collections.map(c => ({
-    id: c.id,
-    title: c.title,
-    description: c.description,
-    isPublic: c.isPublic,
-    createdAt: c.createdAt,
-    itemCount: c._count.items,
-  })) });
+  res.json({
+    collections: collections.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      isPublic: c.isPublic,
+      createdAt: c.createdAt,
+      itemCount: c._count.items,
+      ownerName: c.user?.name ?? null,
+    })),
+  });
 });
 
 // Create a collection

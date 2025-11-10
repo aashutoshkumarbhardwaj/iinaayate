@@ -1,6 +1,6 @@
 import { TrendingUp, Users, Hash, Star, Headphones, Compass, Mic2, ChevronDown, ShoppingBag, Feather } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { postAPI, userAPI } from '../utils/api';
+import { postAPI, userAPI, statsAPI, moodsAPI } from '../utils/api';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -18,25 +18,47 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
   const [trendingPosts, setTrendingPosts] = useState<any[]>([]);
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
   const [topAuthors, setTopAuthors] = useState<any[]>([]);
+  const [stats, setStats] = useState<{ totalPoems: number; activePoets: number; newThisWeek: number } | null>(null);
+  const [moods, setMoods] = useState<Array<{ mood: string; count: number }>>([]);
+  const [audioOnly, setAudioOnly] = useState(false);
+  const [moodFilter, setMoodFilter] = useState<string | null>(null);
+  const [showMoodChips, setShowMoodChips] = useState(false);
+  const derivedStats = useMemo(() => {
+    if (!feedPosts || feedPosts.length === 0) return null;
+    const totalPoems = feedPosts.length;
+    const uniqueUsers = new Set<string>();
+    let newThisWeek = 0;
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    for (const p of feedPosts) {
+      if (p.userId) uniqueUsers.add(p.userId);
+      const ts = p.createdAt ? new Date(p.createdAt).getTime() : 0;
+      if (ts >= weekAgo) newThisWeek += 1;
+    }
+    return { totalPoems, activePoets: uniqueUsers.size, newThisWeek };
+  }, [feedPosts]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [topPosts, feed, users] = await Promise.all([
+        const [topPosts, feed, users, community, moodsData] = await Promise.all([
           postAPI.getTopPosts(),
-          postAPI.getPosts({ limit: 100 }),
+          postAPI.getPosts({ limit: 100, hasAudio: audioOnly, mood: moodFilter || undefined }),
           userAPI.getTopUsers(),
+          statsAPI.getCommunity().catch(() => null),
+          moodsAPI.get().catch(() => ({ moods: [] })),
         ]);
         if (mounted) {
           setTrendingPosts(topPosts);
           setFeedPosts(feed);
           setTopAuthors(users);
+          if (community) setStats(community);
+          setMoods(moodsData.moods || []);
         }
       } catch {}
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [audioOnly, moodFilter]);
 
   const genres = useMemo(() => {
     const map = new Map<string, { count: number; totalLikes: number }>();
@@ -51,13 +73,20 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
     return Array.from(map.entries()).map(([name, stats]) => ({ name, ...stats }));
   }, [feedPosts]);
 
+  const topTags = useMemo(() => {
+    return [...genres]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((g) => `#${g.name.toLowerCase()}`);
+  }, [genres]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl text-gray-900 mb-3">
-            Explore Inayate
+            Explore iinaayate
           </h1>
           <p className="text-lg text-gray-600">
             Discover trending poems, top poets, and vibrant communities
@@ -114,7 +143,10 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
         {/* Quick Access Cards - Poetistic Style */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {/* Poetry Audios */}
-          <button className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl p-8 hover:shadow-xl transition-all text-left group">
+          <button
+            onClick={() => { setAudioOnly(true); setMoodFilter(null); }}
+            className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl p-8 hover:shadow-xl transition-all text-left group"
+          >
             <div className="flex items-center justify-between mb-4">
               <Headphones className="w-16 h-16 text-purple-300" />
             </div>
@@ -148,10 +180,32 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
           </button>
 
           {/* Moods */}
-          <button className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all text-left group flex items-center justify-between">
-            <p className="text-lg text-gray-900">Moods</p>
-            <ChevronDown className="w-5 h-5 text-gray-600" />
-          </button>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all text-left">
+            <button
+              onClick={() => setShowMoodChips((s) => !s)}
+              className="w-full flex items-center justify-between"
+            >
+              <p className="text-lg text-gray-900">Moods</p>
+              <ChevronDown className="w-5 h-5 text-gray-600" />
+            </button>
+            {showMoodChips && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {moods.map((m) => (
+                  <button
+                    key={m.mood}
+                    onClick={() => { setMoodFilter(m.mood); setAudioOnly(false); }}
+                    className={`px-3 py-1.5 rounded-full text-sm border ${moodFilter === m.mood ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                    title={`${m.count} posts`}
+                  >
+                    {m.mood}
+                  </button>
+                ))}
+                {moods.length === 0 && (
+                  <span className="text-sm text-gray-500">No moods yet</span>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Sher Swipe */}
           <button className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8 hover:shadow-xl transition-all text-left group">
@@ -277,14 +331,14 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                     </Avatar>
                     <div className="flex-1 text-left">
                       <p className="text-gray-900">{author.name}</p>
-                      <p className="text-sm text-gray-500">{author.followers} followers</p>
+                      <p className="text-sm text-gray-500">{(author.followersCount ?? author._count?.followers ?? 0).toLocaleString()} followers</p>
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Popular Tags */}
+            {/* Popular Tags (from DB genres) */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Hash className="w-5 h-5 text-rose-500" />
@@ -293,10 +347,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
-                {[
-                  '#love', '#heartbreak', '#nature', '#hope', '#dreams',
-                  '#urdu', '#emotions', '#life', '#soul', '#poetry'
-                ].map((tag) => (
+                {topTags.map((tag) => (
                   <button
                     key={tag}
                     className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-full text-sm hover:bg-rose-100 transition-colors border border-rose-100"
@@ -315,15 +366,15 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-700">Total Poems</span>
-                  <span className="text-gray-900">1,234</span>
+                  <span className="text-gray-900">{(stats || derivedStats) ? (stats || derivedStats)!.totalPoems.toLocaleString() : '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Active Poets</span>
-                  <span className="text-gray-900">456</span>
+                  <span className="text-gray-900">{(stats || derivedStats) ? (stats || derivedStats)!.activePoets.toLocaleString() : '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">This Week</span>
-                  <span className="text-gray-900">89 new poems</span>
+                  <span className="text-gray-900">{(stats || derivedStats) ? `${(stats || derivedStats)!.newThisWeek.toLocaleString()} new poems` : '—'}</span>
                 </div>
               </div>
             </div>

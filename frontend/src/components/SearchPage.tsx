@@ -92,7 +92,7 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
           </Button>
 
           <h1 className="text-3xl text-gray-900 mb-6">
-            Search Inayate
+            Search iinaayate
           </h1>
 
           {/* Search Input */}

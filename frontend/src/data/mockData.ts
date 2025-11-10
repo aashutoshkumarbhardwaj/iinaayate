@@ -1,4 +1,4 @@
-// Mock data for Inayate poetry platform
+// Mock data for iinaayate poetry platform
 
 export interface User {
   id: string;

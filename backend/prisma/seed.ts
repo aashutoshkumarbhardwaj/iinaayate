@@ -66,7 +66,7 @@ async function main() {
   // Store products
   await prisma.product.createMany({
     data: [
-      { title: 'Inayate Notebook', description: 'Hardbound notebook for poetry', price: 49900, image: null },
+      { title: 'iinaayate Notebook', description: 'Hardbound notebook for poetry', price: 49900, image: null },
       { title: 'Calligraphy Pen', description: 'Elegant pen for flowing verses', price: 24900, image: null },
     ],
     skipDuplicates: true,

@@ -1,4 +1,4 @@
-# Inayate - Poetry Sharing Platform
+# iinaayate - Poetry Sharing Platform
 
 A beautiful, full-featured poetry sharing platform inspired by Poetistic.com, built with React, TypeScript, Tailwind CSS, and Supabase.
 

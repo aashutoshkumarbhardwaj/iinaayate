@@ -192,7 +192,7 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
               Share Your Poetry with the World
             </h3>
             <p className="text-foreground/80 mb-8 max-w-2xl mx-auto text-lg">
-              Join thousands of poets on Inayate. Share your ghazals, shers, and nazms with 
+              Join thousands of poets on iinaayate. Share your ghazals, shers, and nazms with 
               a community that appreciates beautiful words.
             </p>
             <Button className="bg-cta text-cta-foreground hover:brightness-95">

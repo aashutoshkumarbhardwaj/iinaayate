@@ -42,6 +42,20 @@ app.use((req, _res, next) => {
   next();
 });
 
+// Community stats
+app.get('/stats/community', async (_req, res) => {
+  try {
+    const [totalPoems, activePoets, newThisWeek] = await Promise.all([
+      prisma.post.count(),
+      prisma.user.count({ where: { posts: { some: {} } } }),
+      prisma.post.count({ where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
+    ]);
+    res.json({ totalPoems, activePoets, newThisWeek });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load community stats' });
+  }
+});
+
 app.get('/health', (_req: express.Request, res: express.Response) => res.json({ ok: true }));
 
 // Fallback direct handlers (safety net if router path matching fails)

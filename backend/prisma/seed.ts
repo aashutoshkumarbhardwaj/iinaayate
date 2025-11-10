@@ -17,6 +17,7 @@ async function main() {
       avatar: null,
       bio: 'Lover of ghazals and nazms.'
     },
+    
   });
   const u2 = await prisma.user.upsert({
     where: { email: 'poet2@example.com' },

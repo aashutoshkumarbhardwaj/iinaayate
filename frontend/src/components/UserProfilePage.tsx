@@ -20,8 +20,11 @@ export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: Us
   const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const isSelf = currentUserId === userId;
 
   useEffect(() => {
+    setCurrentUserId(localStorage.getItem('currentUserId'));
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
@@ -32,14 +35,16 @@ export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: Us
           postAPI.getSavedPosts(),
         ]);
         let following: any = null;
-        try { following = await userAPI.isFollowing(userId); } catch {}
+        if (!isSelf) {
+          try { following = await userAPI.isFollowing(userId); } catch {}
+        }
         if (!userData) {
           setError('User not found');
         } else {
           setUser(userData);
           setUserPosts(userPostsData);
           setSavedPosts(savedPostsData);
-          setIsFollowing(!!following?.following);
+          setIsFollowing(isSelf ? null : !!following?.following);
         }
       } catch (err) {
         setError('Failed to load profile data.');
@@ -49,7 +54,7 @@ export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: Us
     };
 
     loadData();
-  }, [userId]);
+  }, [userId, isSelf]);
 
   if (isLoading) {
     return (
@@ -106,22 +111,26 @@ export function UserProfilePage({ userId, onBack, onPostClick, onUserClick }: Us
                   </h1>
                   <p className="text-gray-600">@{user.username}</p>
                 </div>
-                <Button
-                  className="bg-rose-500 hover:bg-rose-600 text-white"
-                  onClick={async () => {
-                    try {
-                      if (isFollowing) {
-                        await userAPI.unfollow(userId);
-                        setIsFollowing(false);
-                      } else {
-                        await userAPI.follow(userId);
-                        setIsFollowing(true);
+                {!isSelf && (
+                  <Button
+                    className="bg-rose-500 hover:bg-rose-600 text-white"
+                    onClick={async () => {
+                      try {
+                        if (isFollowing) {
+                          await userAPI.unfollow(userId);
+                          setIsFollowing(false);
+                        } else {
+                          await userAPI.follow(userId);
+                          setIsFollowing(true);
+                        }
+                      } catch (e) {
+                        // ignore
                       }
-                    } catch {}
-                  }}
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Button>
+                    }}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Button>
+                )}
               </div>
 
               {/* Bio */}

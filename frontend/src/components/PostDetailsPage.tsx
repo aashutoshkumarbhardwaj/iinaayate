@@ -52,22 +52,51 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
   }
 
   const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikes(isLiked ? likes - 1 : likes + 1);
+    const next = !isLiked;
+    setIsLiked(next);
+    setLikes(prev => (next ? prev + 1 : Math.max(0, prev - 1)));
     (async () => {
       try {
-        await postAPI.likePost(postId);
-      } catch {}
+        if (next) {
+          await postAPI.likePost(postId);
+        } else {
+          await postAPI.unlikePost(postId);
+        }
+      } catch {
+        // rollback on failure
+        setIsLiked(!next);
+        setLikes(prev => (!next ? prev + 1 : Math.max(0, prev - 1)));
+      }
     })();
   };
 
   const handleSave = () => {
-    setIsSaved(!isSaved);
+    const next = !isSaved;
+    setIsSaved(next);
     (async () => {
       try {
-        await postAPI.savePost(postId);
-      } catch {}
+        if (next) {
+          await postAPI.savePost(postId);
+        } else {
+          await postAPI.unsavePost(postId);
+        }
+      } catch {
+        // rollback
+        setIsSaved(!next);
+      }
     })();
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}#post/${postId}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: post?.title || 'Poem', text: 'Read this poem on Iinaayate', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link copied to clipboard');
+      }
+    } catch {}
   };
 
   const handleDownloadImage = () => {
@@ -145,9 +174,9 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
             </Button>
             <Button variant="ghost" className="gap-2 text-gray-600">
               <MessageCircle className="w-5 h-5" />
-              <span>{post.comments}</span>
+              <span>{comments.length}</span>
             </Button>
-            <Button variant="ghost" className="gap-2 text-gray-600">
+            <Button variant="ghost" className="gap-2 text-gray-600" onClick={handleShare}>
               <Share2 className="w-5 h-5" />
               <span>Share</span>
             </Button>

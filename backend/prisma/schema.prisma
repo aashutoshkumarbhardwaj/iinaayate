@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "neondb_owner"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

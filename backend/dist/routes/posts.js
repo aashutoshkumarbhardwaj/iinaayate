@@ -101,7 +101,7 @@ router.post('/', auth_1.requireAuth, async (req, res) => {
     const { title, content, genre, mood, audioUrl } = req.body;
     if (!title || !content || !genre)
         return res.status(400).json({ error: 'Missing fields' });
-    const post = await prisma_1.prisma.post.create({ data: { title, content, genre, mood, audioUrl, userId: req.userId } });
+    const post = await prisma_1.prisma.post.create({ data: { title, content, genre, mood: mood ?? null, audioUrl: audioUrl ?? null, userId: req.userId } });
     res.status(201).json(post);
 });
 router.put('/:id', auth_1.requireAuth, async (req, res) => {

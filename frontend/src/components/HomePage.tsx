@@ -6,6 +6,7 @@ import { TopPoemsCarousel } from './TopPoemsCarousel';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Helmet } from 'react-helmet-async';
 
 interface HomePageProps {
   onPostClick: (postId: string) => void;
@@ -133,6 +134,13 @@ export function HomePage({ onPostClick, onUserClick, onNavigate }: HomePageProps
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+      <Helmet>
+        <title>iinaayate – Hindi Urdu Poetry & Shayari</title>
+        <meta name="description" content="Read, write, and share Hindi, Urdu, and Hinglish poetry and shayari on iinaayate. Discover ghazals, nazms, sher, and more." />
+        <link rel="canonical" href="/" />
+        <meta property="og:title" content="iinaayate – Hindi Urdu Poetry & Shayari" />
+        <meta property="og:description" content="Read, write, and share poetry and shayari in Hindi, Urdu, and Hinglish." />
+      </Helmet>
       <div className="max-w-6xl mx-auto px-4 py-10">
         {/* Hero Section with Search */}
         <div className="relative rounded-2xl overflow-hidden mb-12 border border-gray-200 bg-gradient-to-br from-rose-50 to-amber-50">

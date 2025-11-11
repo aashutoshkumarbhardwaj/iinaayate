@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { PostCard } from './PostCard';
+import { Helmet } from 'react-helmet-async';
 
 interface ExplorePageProps {
   onPostClick: (postId: string) => void;
@@ -136,6 +137,13 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+      <Helmet>
+        <title>Explore Poetry – iinaayate</title>
+        <meta name="description" content="Discover trending poems, top poets, genres, and moods on iinaayate. Explore Hindi, Urdu, and Hinglish shayari." />
+        <link rel="canonical" href="/explore" />
+        <meta property="og:title" content="Explore Poetry – iinaayate" />
+        <meta property="og:description" content="Trending poems, top poets, and genres in Hindi, Urdu, and Hinglish." />
+      </Helmet>
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">
@@ -147,7 +155,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
           </p>
         </div>
 
-        {/* Genre Statistics - Poetistic Style */}
+        {/* Genre Statistics -  Style */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <button className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-8 text-center hover:shadow-xl transition-all group">
             <p className="text-6xl mb-2 group-hover:scale-110 transition-transform" style={{ 
@@ -194,7 +202,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
           </p>
         </button>
 
-        {/* Quick Access Cards - Poetistic Style */}
+        {/* Quick Access Cards -  Style */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {/* Poetry Audios */}
           <button
@@ -369,7 +377,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
               </div>
               <p className="text-gray-400 text-sm mb-2">Starting ₹7 /week</p>
               <h3 className="text-2xl text-white mb-6">Unlimited coins<br/>
-                <span className="text-lg text-gray-400">with Poetistic Pro</span>
+                <span className="text-lg text-gray-400">with iinaayate Pro</span>
               </h3>
               <Button className="bg-amber-400 hover:bg-amber-500 text-gray-900">
                 Start trial

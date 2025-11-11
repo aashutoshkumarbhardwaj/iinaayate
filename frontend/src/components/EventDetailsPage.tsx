@@ -3,6 +3,7 @@ import { ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
 import { eventsAPI, getAuthToken, authAPI } from '../utils/api';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Helmet } from 'react-helmet-async';
 
 interface EventDetailsPageProps {
   eventId: string;
@@ -117,6 +118,15 @@ export function EventDetailsPage({ eventId, onBack, onView }: EventDetailsPagePr
       <div className="max-w-5xl mx-auto px-4 py-6">
         <Button variant="ghost" onClick={onBack} className="-ml-2"><ArrowLeft className="w-4 h-4 mr-2"/>Back</Button>
       </div>
+      <Helmet>
+        <title>{`${event.title} – Poetry Event | iinaayate`}</title>
+        <meta name="description" content={(event.subtitle || `Join for poetry: ${event.title}`).slice(0,160)} />
+        <link rel="canonical" href={`/event/${eventId}`} />
+        <meta property="og:type" content="event" />
+        <meta property="og:title" content={`${event.title} – Poetry Event`} />
+        <meta property="og:description" content={(event.subtitle || 'Community poetry event').slice(0,200)} />
+        {event.poster && <meta property="og:image" content={event.poster} />}
+      </Helmet>
 
       {/* Poster */}
       <div className="max-w-5xl mx-auto px-4">

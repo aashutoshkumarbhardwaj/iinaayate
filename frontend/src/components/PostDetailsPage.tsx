@@ -6,6 +6,7 @@ import { Textarea } from './ui/textarea';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { commentAPI, postAPI, userAPI, transliterateAPI } from '../utils/api';
+import { Helmet } from 'react-helmet-async';
 
 interface PostDetailsPageProps {
   postId: string;
@@ -159,6 +160,14 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
       <div className="max-w-3xl mx-auto px-4 py-8">
+        <Helmet>
+          <title>{`${post.title || 'Poem'} – ${user.name} | iinaayate`}</title>
+          <meta name="description" content={(post.content || '').split('\n').slice(0, 2).join(' ').slice(0, 160)} />
+          <link rel="canonical" href={`/post/${postId}`} />
+          <meta property="og:type" content="article" />
+          <meta property="og:title" content={`${post.title || 'Poem'} – ${user.name}`} />
+          <meta property="og:description" content={(post.content || '').split('\n').slice(0, 2).join(' ').slice(0, 200)} />
+        </Helmet>
         {/* Back */}
         <Button variant="ghost" onClick={onBack} className="mb-6 -ml-2">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back

@@ -78,7 +78,7 @@ app.get('/users', async (req, res) => {
                 select: { id: true, name: true, username: true, avatar: true, _count: { select: { followers: true, posts: true } } },
             }),
         ]);
-        const users = rows.map(u => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers, postsCount: u._count.posts }));
+        const users = rows.map((u) => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers, postsCount: u._count.posts }));
         res.json({ users, total });
     }
     catch (e) {
@@ -109,7 +109,7 @@ app.get('/posts/top', async (_req, res) => {
             orderBy: { likes: { _count: 'desc' } },
             include: { user: { select: { id: true, name: true, avatar: true } }, _count: { select: { likes: true } } },
         });
-        res.json(posts.map(p => ({ id: p.id, title: p.title, content: p.content, genre: p.genre, createdAt: p.createdAt, user: p.user, likesCount: p._count.likes })));
+        res.json(posts.map((p) => ({ id: p.id, title: p.title, content: p.content, genre: p.genre, createdAt: p.createdAt, user: p.user, likesCount: p._count.likes })));
     }
     catch (e) {
         res.status(500).json({ error: 'Failed to load top posts' });
@@ -123,7 +123,7 @@ app.get('/users/top', async (_req, res) => {
             orderBy: { followers: { _count: 'desc' } },
             select: { id: true, name: true, username: true, avatar: true, _count: { select: { followers: true } } },
         });
-        res.json(users.map(u => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers })));
+        res.json(users.map((u) => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers })));
     }
     catch (e) {
         res.status(500).json({ error: 'Failed to load top users' });
@@ -162,7 +162,7 @@ app.get('/top-posts', async (_req, res) => {
             orderBy: { likes: { _count: 'desc' } },
             include: { user: { select: { id: true, name: true, avatar: true } }, _count: { select: { likes: true } } },
         });
-        res.json(posts.map(p => ({ id: p.id, title: p.title, content: p.content, genre: p.genre, createdAt: p.createdAt, user: p.user, likesCount: p._count.likes })));
+        res.json(posts.map((p) => ({ id: p.id, title: p.title, content: p.content, genre: p.genre, createdAt: p.createdAt, user: p.user, likesCount: p._count.likes })));
     }
     catch (e) {
         res.status(500).json({ error: 'Failed to load top posts (alias)' });
@@ -176,7 +176,7 @@ app.get('/top-users', async (_req, res) => {
             orderBy: { followers: { _count: 'desc' } },
             select: { id: true, name: true, username: true, avatar: true, _count: { select: { followers: true } } },
         });
-        res.json(users.map(u => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers })));
+        res.json(users.map((u) => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers })));
     }
     catch (e) {
         res.status(500).json({ error: 'Failed to load top users (alias)' });

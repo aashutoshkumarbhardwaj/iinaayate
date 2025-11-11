@@ -4,6 +4,44 @@ const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
+// List users with pagination and filters
+router.get('/', async (req, res) => {
+    const { limit = '24', offset = '0', startsWith, sort = 'popularity' } = req.query;
+    const take = Math.min(parseInt(limit, 10) || 24, 200);
+    const skip = parseInt(offset, 10) || 0;
+    const where = {};
+    if (startsWith && typeof startsWith === 'string') {
+        where.name = { startsWith, mode: 'insensitive' };
+    }
+    const orderBy = sort === 'name'
+        ? [{ name: 'asc' }]
+        : [{ followers: { _count: 'desc' } }];
+    const [total, rows] = await Promise.all([
+        prisma_1.prisma.user.count({ where }),
+        prisma_1.prisma.user.findMany({
+            where,
+            take,
+            skip,
+            orderBy,
+            select: {
+                id: true,
+                name: true,
+                username: true,
+                avatar: true,
+                _count: { select: { followers: true, posts: true } },
+            },
+        }),
+    ]);
+    const users = rows.map(u => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        avatar: u.avatar,
+        followersCount: u._count.followers,
+        postsCount: u._count.posts,
+    }));
+    res.json({ users, total });
+});
 router.get('/top', async (_req, res) => {
     const limit = 8;
     const users = await prisma_1.prisma.user.findMany({
@@ -31,7 +69,18 @@ router.get('/:id', async (req, res) => {
     }
     if (!id)
         return res.status(400).json({ error: 'Missing id' });
-    const user = await prisma_1.prisma.user.findUnique({ where: { id }, select: { id: true, username: true, name: true, avatar: true, bio: true, createdAt: true } });
+    const user = await prisma_1.prisma.user.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            username: true,
+            name: true,
+            avatar: true,
+            bio: true,
+            createdAt: true,
+            _count: { select: { posts: true, followers: true, following: true } },
+        },
+    });
     if (!user)
         return res.status(404).json({ error: 'User not found' });
     res.json(user);

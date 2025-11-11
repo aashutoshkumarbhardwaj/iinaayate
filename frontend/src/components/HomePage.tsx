@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Search as SearchIcon, Calendar, ArrowRight, ScrollText, Sparkles, PenLine, Leaf } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { eventsAPI, postAPI, userAPI } from '../utils/api';
+import { eventsAPI, postAPI, userAPI, statsAPI } from '../utils/api';
 import { PostCard } from './PostCard';
 import { TopPoemsCarousel } from './TopPoemsCarousel';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -18,8 +18,8 @@ export function HomePage({ onPostClick, onUserClick, onNavigate }: HomePageProps
   const [featuredPoets, setFeaturedPoets] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [topPosts, setTopPosts] = useState<any[]>([]);
-  const [topIndex, setTopIndex] = useState(0);
-  const [topHover, setTopHover] = useState(false);
+  const [qotd, setQotd] = useState<any | null>(null);
+  const [topFive, setTopFive] = useState<any[]>([]);
   const [followed, setFollowed] = useState<Record<string, boolean>>({});
   const [events, setEvents] = useState<any[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -28,32 +28,79 @@ export function HomePage({ onPostClick, onUserClick, onNavigate }: HomePageProps
     let mounted = true;
     (async () => {
       try {
-        const [users, feed, top, evts] = await Promise.all([
+        const [users, feed, top, evtsWrap, stats] = await Promise.all([
           userAPI.getTopUsers(),
           postAPI.getPosts({ limit: 10 }),
           postAPI.getTopPosts(),
-          eventsAPI.getEvents().catch(() => []),
+          eventsAPI.getEvents().catch(() => ({ events: [] })),
+          statsAPI.getCommunity().catch(() => null),
         ]);
-        if (mounted) {
-          setFeaturedPoets(users);
-          setPosts(feed);
-          setTopPosts(top || []);
-          setEvents(evts || []);
+        if (!mounted) return;
+        const evts = Array.isArray((evtsWrap as any)) ? (evtsWrap as any) : ((evtsWrap as any)?.events ?? []);
+        setFeaturedPoets(users);
+        setPosts(feed);
+        setTopPosts(top || []);
+        setEvents(evts || []);
+        // compute daily selections
+        const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const seed = xmur3(todayKey)();
+        const rng = mulberry32(seed);
+        // Quote of the Day: deterministic random across entire DB if we know total poems
+        const totalPoems: number | undefined = (stats && (stats.totalPoems || stats.poems || stats.posts)) as any;
+        if (typeof totalPoems === 'number' && totalPoems > 0) {
+          const index = Math.floor(rng() * totalPoems);
+          try {
+            const one = await postAPI.getPosts({ limit: 1, offset: index });
+            if (Array.isArray(one) && one[0]) setQotd(one[0]);
+            else if ((top || []).length > 0) setQotd(top[Math.floor(rng() * (top.length))]);
+            else setQotd(null);
+          } catch {
+            if ((top || []).length > 0) setQotd(top[Math.floor(rng() * (top.length))]);
+            else setQotd(null);
+          }
+        } else {
+          // Fallback to topPosts pool if stats unavailable
+          if ((top || []).length > 0) setQotd(top[Math.floor(rng() * (top.length))]);
+          else setQotd(null);
         }
+        const pool = (feed || top || []).filter(Boolean);
+        const picks = pickUniqueIndices(pool.length, 5, rng).map(i => pool[i]).filter(Boolean);
+        setTopFive(picks);
       } catch {}
     })();
     return () => { mounted = false; };
   }, []);
 
-  // Autoplay for Today’s Top Shayari section
-  useEffect(() => {
-    if (!topPosts.length) return;
-    if (topHover) return;
-    const id = setInterval(() => {
-      setTopIndex((prev) => (prev + 1) % topPosts.length);
-    }, 5000);
-    return () => clearInterval(id);
-  }, [topPosts.length, topHover]);
+  // Deterministic daily helpers (seeded RNG)
+  function xmur3(str: string) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= h >>> 16) >>> 0;
+    };
+  }
+  function mulberry32(a: number) {
+    return function () {
+      let t = (a += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function pickUniqueIndices(n: number, k: number, rng: () => number) {
+    const idxs: number[] = [];
+    const max = Math.max(0, Math.min(n, k));
+    while (idxs.length < max) {
+      const i = Math.floor(rng() * n);
+      if (!idxs.includes(i)) idxs.push(i);
+    }
+    return idxs;
+  }
   
   const scrollPoets = (direction: 'left' | 'right') => {
     if (direction === 'left') {
@@ -110,32 +157,34 @@ export function HomePage({ onPostClick, onUserClick, onNavigate }: HomePageProps
           </div>
         </div>
 
-        {/* Quote of the Day (from top shayari) */}
-        {topPosts.length > 0 && (
-          <div className="mb-12" onMouseEnter={() => setTopHover(true)} onMouseLeave={() => setTopHover(false)}>
+        {/* Quote of the Day (deterministic daily from top posts) */}
+        {qotd && (
+          <div className="mb-12">
             <h2 className="text-center text-sm uppercase tracking-[0.25em] text-gray-500 mb-4">Quote of the Day</h2>
             <div className="max-w-3xl mx-auto bg-amber-50/70 border border-amber-100 rounded-2xl p-10 text-center">
-              {(() => {
-                const p = topPosts[topIndex];
-                return (
-                  <button key={p.id} onClick={() => onPostClick(p.id)} className="block w-full group">
-                    <div className="text-3xl text-gray-900 leading-relaxed whitespace-pre-wrap italic group-hover:text-rose-600 transition-colors" style={{ fontFamily: 'serif' }}>
-                      {(p.content || '').split('\n').slice(0, 2).join('\n')}
-                    </div>
-                    <div className="mt-3 text-gray-500 text-sm tracking-wide">— {p.user?.name}</div>
-                  </button>
-                );
-              })()}
-              <div className="flex items-center justify-center gap-2 mt-5">
-                {topPosts.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setTopIndex(i)}
-                    className={`h-1.5 rounded-full transition-all ${i === topIndex ? 'w-6 bg-rose-500' : 'w-2.5 bg-gray-300'}`}
-                    aria-label={`Go to shayari ${i + 1}`}
-                  />
-                ))}
-              </div>
+              <button onClick={() => onPostClick(qotd.id)} className="block w-full group">
+                <div className="text-3xl text-gray-900 leading-relaxed whitespace-pre-wrap italic group-hover:text-rose-600 transition-colors" style={{ fontFamily: 'serif' }}>
+                  {(qotd.content || '').split('\n').slice(0, 2).join('\n')}
+                </div>
+                <div className="mt-3 text-gray-500 text-sm tracking-wide">— {qotd.user?.name}</div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Today’s Top Five (deterministic daily random) */}
+        {topFive.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-center text-sm uppercase tracking-[0.25em] text-gray-500 mb-6">Today's Top Five</h2>
+            <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-4">
+              {topFive.map((p) => (
+                <button key={p.id} onClick={() => onPostClick(p.id)} className="text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-rose-200 hover:shadow-sm transition-all">
+                  <div className="text-gray-900 line-clamp-3 whitespace-pre-wrap" style={{ fontFamily: 'serif' }}>
+                    {(p.content || '').split('\n')[0]}
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">{p.user?.name || 'Unknown'}</div>
+                </button>
+              ))}
             </div>
           </div>
         )}

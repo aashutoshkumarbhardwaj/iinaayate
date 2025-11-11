@@ -25,6 +25,7 @@ model User {
   followers      Follow[]        @relation("followers")
   supportTickets SupportTicket[]
   collections    Collection[]
+  rsvps          RSVP[]
 }
 
 model Post {
@@ -109,6 +110,17 @@ model Event {
   location  String
   poster    String?
   createdAt DateTime @default(now())
+  rsvps     RSVP[]
+}
+
+model RSVP {
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+  createdAt DateTime @default(now())
+
+  @@id([userId, eventId])
 }
 
 model Collection {

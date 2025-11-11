@@ -66,6 +66,16 @@ export const userAPI = {
     return apiRequest(`/users/top`);
   },
 
+  async listUsers(params?: { limit?: number; offset?: number; sort?: 'popularity' | 'name'; startsWith?: string }) {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    if (params?.sort) query.set('sort', params.sort);
+    if (params?.startsWith) query.set('startsWith', params.startsWith);
+    const qs = query.toString();
+    return apiRequest(`/users${qs ? `?${qs}` : ''}`);
+  },
+
   async updateUser(userId: string, updates: any) {
     return apiRequest(`/users/${userId}`, {
       method: 'PUT',
@@ -253,6 +263,19 @@ export const eventsAPI = {
   async createEvent(input: { title: string; subtitle?: string; startsAt: string; location: string; poster?: string }) {
     return apiRequest(`/events`, { method: 'POST', body: JSON.stringify(input) });
   },
+  async rsvp(eventId: string) {
+    return apiRequest(`/events/${eventId}/rsvp`, { method: 'POST' });
+  },
+  async unrsvp(eventId: string) {
+    return apiRequest(`/events/${eventId}/rsvp`, { method: 'DELETE' });
+  },
+  async listAttendees(eventId: string, params?: { limit?: number; offset?: number }) {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return apiRequest(`/events/${eventId}/rsvps${qs ? `?${qs}` : ''}`);
+  },
 };
 
 // Collections API
@@ -264,6 +287,16 @@ export const collectionsAPI = {
     return apiRequest(`/collections`, {
       method: 'POST',
       body: JSON.stringify(input),
+    });
+  },
+};
+
+// Transliteration API
+export const transliterateAPI = {
+  async convert(text: string, from: 'Urdu', to: 'Devanagari' | 'Latin' | 'Hinglish') {
+    return apiRequest(`/transliterate`, {
+      method: 'POST',
+      body: JSON.stringify({ text, from, to }),
     });
   },
 };

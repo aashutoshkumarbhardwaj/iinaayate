@@ -5,14 +5,18 @@ const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.get('/', async (req, res) => {
-    const { limit = '20', offset = '0', genre, userId } = req.query;
-    const take = Math.min(parseInt(limit, 10) || 20, 100);
+    const { limit = '20', offset = '0', genre, userId, mood, hasAudio } = req.query;
+    const take = Math.min(parseInt(limit, 10) || 20, 200);
     const skip = parseInt(offset, 10) || 0;
     const where = {};
     if (genre)
         where.genre = genre;
     if (userId)
         where.userId = userId;
+    if (mood)
+        where.mood = mood;
+    if (hasAudio === 'true')
+        where.audioUrl = { not: null };
     const posts = await prisma_1.prisma.post.findMany({
         where,
         take,
@@ -94,10 +98,10 @@ router.get('/:id', async (req, res) => {
     res.json(post);
 });
 router.post('/', auth_1.requireAuth, async (req, res) => {
-    const { title, content, genre } = req.body;
+    const { title, content, genre, mood, audioUrl } = req.body;
     if (!title || !content || !genre)
         return res.status(400).json({ error: 'Missing fields' });
-    const post = await prisma_1.prisma.post.create({ data: { title, content, genre, userId: req.userId } });
+    const post = await prisma_1.prisma.post.create({ data: { title, content, genre, mood, audioUrl, userId: req.userId } });
     res.status(201).json(post);
 });
 router.put('/:id', auth_1.requireAuth, async (req, res) => {
@@ -109,7 +113,7 @@ router.put('/:id', auth_1.requireAuth, async (req, res) => {
         return res.status(404).json({ error: 'Not found' });
     if (existing.userId !== req.userId)
         return res.status(403).json({ error: 'Forbidden' });
-    const { title, content, genre } = req.body;
+    const { title, content, genre, mood, audioUrl } = req.body;
     const data = {};
     if (title !== undefined)
         data.title = title;
@@ -117,6 +121,10 @@ router.put('/:id', auth_1.requireAuth, async (req, res) => {
         data.content = content;
     if (genre !== undefined)
         data.genre = genre;
+    if (mood !== undefined)
+        data.mood = mood;
+    if (audioUrl !== undefined)
+        data.audioUrl = audioUrl;
     const updated = await prisma_1.prisma.post.update({ where: { id }, data });
     res.json(updated);
 });

@@ -97,9 +97,9 @@ export function BlogPage({ onBack, onBlogClick }: BlogPageProps) {
                     {featured.user?.name && (
                       <p className="text-white/85 mb-4">By {featured.user.name}</p>
                     )}
-                    <Button className="bg-amber-400 hover:bg-amber-500 text-gray-900 rounded-full px-5">
+                    <span className="inline-block bg-amber-400 hover:bg-amber-500 text-gray-900 rounded-full px-5 py-2 transition-colors">
                       Read More
-                    </Button>
+                    </span>
                   </div>
                 </div>
               </button>

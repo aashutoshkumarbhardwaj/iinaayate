@@ -7,9 +7,10 @@ import { Input } from './ui/input';
 
 interface EventsPageProps {
   onBack: () => void;
+  onView?: (eventId: string) => void;
 }
 
-export function EventsPage({ onBack }: EventsPageProps) {
+export function EventsPage({ onBack, onView }: EventsPageProps) {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
@@ -129,7 +130,13 @@ export function EventsPage({ onBack }: EventsPageProps) {
                   <span className="line-clamp-1">{event.location}</span>
                 </div>
                 <div className="flex">
-                  <Button className="bg-rose-600 hover:bg-rose-700 text-white w-full" onClick={() => setSelected(event)}>
+                  <Button
+                    className="bg-rose-600 hover:bg-rose-700 text-white w-full"
+                    onClick={() => {
+                      if (onView) onView(event.id);
+                      else setSelected(event);
+                    }}
+                  >
                     {idx % 2 === 0 ? 'RSVP' : 'View Details'}
                   </Button>
                 </div>

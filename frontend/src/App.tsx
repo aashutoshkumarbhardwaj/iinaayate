@@ -13,18 +13,22 @@ import { SettingsPage } from './components/SettingsPage';
 import { CollectionsPage } from './components/CollectionsPage';
 import { DailyPoemPage } from './components/DailyPoemPage';
 import { EventsPage } from './components/EventsPage';
+import { EventDetailsPage } from './components/EventDetailsPage';
 import { WritersPage } from './components/WritersPage';
 import { BlogPage } from './components/BlogPage';
+import { BlogDetailsPage } from './components/BlogDetailsPage';
 import { setAuthToken, authAPI } from './utils/api';
 import { HelpPage } from './components/HelpPage';
 import { StorePage } from './components/StorePage';
 
-type Page = 'auth' | 'home' | 'explore' | 'write' | 'profile' | 'post' | 'search' | 'notifications' | 'settings' | 'collections' | 'daily' | 'events' | 'writers' | 'blog' | 'help' | 'store';
+type Page = 'auth' | 'home' | 'explore' | 'write' | 'profile' | 'post' | 'search' | 'notifications' | 'settings' | 'collections' | 'daily' | 'events' | 'event' | 'writers' | 'blog' | 'blogpost' | 'help' | 'store';
 
 interface NavigationState {
   page: Page;
   postId?: string;
   userId?: string;
+  eventId?: string;
+  blogPostId?: string;
 }
 
 export default function App() {
@@ -118,7 +122,15 @@ export default function App() {
       )}
 
       {navState.page === 'events' && (
-        <EventsPage onBack={handleBack} />
+        <EventsPage onBack={handleBack} onView={(id) => setNavState({ page: 'event', eventId: id })} />
+      )}
+
+      {navState.page === 'event' && navState.eventId && (
+        <EventDetailsPage
+          eventId={navState.eventId}
+          onBack={() => setNavState({ page: 'events' })}
+          onView={(id) => setNavState({ page: 'event', eventId: id })}
+        />
       )}
 
       {navState.page === 'writers' && (
@@ -126,7 +138,7 @@ export default function App() {
       )}
 
       {navState.page === 'blog' && (
-        <BlogPage onBack={handleBack} />
+        <BlogPage onBack={handleBack} onBlogClick={(id) => setNavState({ page: 'blogpost', blogPostId: id })} />
       )}
 
       {navState.page === 'write' && (
@@ -183,6 +195,14 @@ export default function App() {
           onBack={handleBack}
           onUserClick={handleUserClick}
           onPostClick={handlePostClick}
+        />
+      )}
+
+      {navState.page === 'blogpost' && navState.blogPostId && (
+        <BlogDetailsPage
+          postId={navState.blogPostId}
+          onBack={() => setNavState({ page: 'blog' })}
+          onPostClick={(id) => setNavState({ page: 'blogpost', blogPostId: id })}
         />
       )}
     </div>

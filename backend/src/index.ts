@@ -11,6 +11,7 @@ import helpRoutes from './routes/help';
 import storeRoutes from './routes/store';
 import eventsRoutes from './routes/events';
 import collectionsRoutes from './routes/collections';
+import transliterateRoutes from './routes/transliterate';
 
 const app = express();
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
@@ -40,6 +41,47 @@ app.use(express.json());
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
+});
+
+// Mount routers
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/posts', postRoutes);
+app.use('/search', searchRoutes);
+app.use('/notifications', notificationsRoutes);
+app.use('/help', helpRoutes);
+app.use('/store', storeRoutes);
+app.use('/events', eventsRoutes);
+app.use('/collections', collectionsRoutes);
+app.use('/transliterate', transliterateRoutes);
+
+// Fallback list users (mirrors router logic)
+app.get('/users', async (req, res) => {
+  try {
+    console.log('Handling fallback GET /users');
+    const { limit = '24', offset = '0', startsWith, sort = 'popularity' } = req.query as any;
+    const take = Math.min(parseInt(limit as string, 10) || 24, 200);
+    const skip = parseInt(offset as string, 10) || 0;
+    const where: any = {};
+    if (startsWith && typeof startsWith === 'string') {
+      where.name = { startsWith, mode: 'insensitive' };
+    }
+    const orderBy = sort === 'name' ? [{ name: 'asc' as const }] : [{ followers: { _count: 'desc' as const } }];
+    const [total, rows] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        take,
+        skip,
+        orderBy,
+        select: { id: true, name: true, username: true, avatar: true, _count: { select: { followers: true, posts: true } } },
+      }),
+    ]);
+    const users = rows.map(u => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers, postsCount: u._count.posts }));
+    res.json({ users, total });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to list users' });
+  }
 });
 
 // Community stats
@@ -183,6 +225,8 @@ app.use('/events', eventsRoutes);
 console.log('Mounted /events');
 app.use('/collections', collectionsRoutes);
 console.log('Mounted /collections');
+app.use('/transliterate', transliterateRoutes);
+console.log('Mounted /transliterate');
 
 // Simple request logger to debug 404s
 app.use((req, _res, next) => {

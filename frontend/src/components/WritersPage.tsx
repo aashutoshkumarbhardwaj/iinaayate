@@ -22,34 +22,82 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
   const [sortBy, setSortBy] = useState('popularity');
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
   const [writers, setWriters] = useState<any[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [limit] = useState(60);
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [autoLoading, setAutoLoading] = useState(false);
 
+  // Initial load and when filters change
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const users = await userAPI.getTopUsers();
-        if (mounted) setWriters(users);
-      } catch {}
+        setLoading(true);
+        setOffset(0);
+        setHasMore(true);
+        const resp = await userAPI.listUsers({ limit, offset: 0, sort: sortBy as any, startsWith: selectedLetter || undefined });
+        if (!mounted) return;
+        const first = Array.isArray(resp?.users) ? resp.users : resp;
+        const tot = typeof resp?.total === 'number' ? resp.total : first.length;
+        setWriters(first);
+        setTotal(tot);
+        setHasMore(first.length > 0 && (first.length + 0) < tot);
+        setOffset(first.length);
+        // Auto-load subsequent pages so all writers are visible
+        if (tot > first.length) {
+          setAutoLoading(true);
+          let acc = first.length;
+          let nextOffset = first.length;
+          const cap = Math.min(tot, 2000); // safety cap
+          while (mounted && acc < cap) {
+            try {
+              const page = await userAPI.listUsers({ limit, offset: nextOffset, sort: sortBy as any, startsWith: selectedLetter || undefined });
+              const rows = Array.isArray(page?.users) ? page.users : page;
+              if (!rows || rows.length === 0) break;
+              setWriters((prev) => [...prev, ...rows]);
+              acc += rows.length;
+              nextOffset += rows.length;
+              setOffset(nextOffset);
+              setHasMore(nextOffset < tot);
+              if (nextOffset >= tot) break;
+            } catch {
+              break;
+            }
+          }
+          setAutoLoading(false);
+        }
+      } catch {
+        setHasMore(false);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [sortBy, selectedLetter, limit]);
 
-  // Filter writers by selected letter
-  const filteredWriters = selectedLetter
-    ? writers.filter((writer) =>
-        writer.name.toUpperCase().startsWith(selectedLetter)
-      )
-    : writers;
-
-  // Sort writers
-  const sortedWriters = [...filteredWriters].sort((a, b) => {
-    if (sortBy === 'popularity') {
-      return (b.followersCount ?? 0) - (a.followersCount ?? 0);
-    } else if (sortBy === 'name') {
-      return a.name.localeCompare(b.name);
+  const loadMore = async () => {
+    if (loading || autoLoading || !hasMore) return;
+    setLoading(true);
+    try {
+      const resp = await userAPI.listUsers({ limit, offset, sort: sortBy as any, startsWith: selectedLetter || undefined });
+      const next = Array.isArray(resp?.users) ? resp.users : resp;
+      setWriters((prev) => [...prev, ...next]);
+      const newTotal = typeof resp?.total === 'number' ? resp.total : total;
+      const newOffset = offset + next.length;
+      setHasMore(newOffset < newTotal);
+      setOffset(newOffset);
+      if (typeof resp?.total === 'number') setTotal(resp.total);
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoading(false);
     }
-    return 0;
-  });
+  };
+
+  // Data already comes filtered/sorted from backend
+  const sortedWriters = writers;
 
   // Card background colors - soft pastels
   const cardColors = [
@@ -72,6 +120,7 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
 
         <div className="text-center mb-12">
           <h1 className="text-5xl font-serif text-foreground mb-3">Writers</h1>
+          <p className="text-sm text-muted-foreground">{total.toLocaleString()} writers</p>
           <p className="text-lg text-muted-foreground">
             Discover talented poets and their beautiful works
           </p>
@@ -173,8 +222,8 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
 
         {sortedWriters.length > 0 && (
           <div className="text-center mb-16">
-            <Button variant="outline" className="border-border text-foreground hover:bg-accent/20">
-              Load more writers
+            <Button onClick={loadMore} disabled={loading || autoLoading || !hasMore} variant="outline" className="border-border text-foreground hover:bg-accent/20 min-w-[180px]">
+              {autoLoading ? 'Loading all…' : loading ? 'Loading…' : hasMore ? 'Load more writers' : 'No more writers'}
             </Button>
           </div>
         )}

@@ -6,7 +6,7 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   const { limit = '20', offset = '0', genre, userId, mood, hasAudio } = req.query as any;
-  const take = Math.min(parseInt(limit as string, 10) || 20, 100);
+  const take = Math.min(parseInt(limit as string, 10) || 20, 200);
   const skip = parseInt(offset as string, 10) || 0;
   const where: any = {};
   if (genre) where.genre = genre;

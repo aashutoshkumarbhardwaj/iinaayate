@@ -4,6 +4,46 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+// List users with pagination and filters
+router.get('/', async (req, res) => {
+  const { limit = '24', offset = '0', startsWith, sort = 'popularity' } = req.query as any;
+  const take = Math.min(parseInt(limit as string, 10) || 24, 200);
+  const skip = parseInt(offset as string, 10) || 0;
+  const where: any = {};
+  if (startsWith && typeof startsWith === 'string') {
+    where.name = { startsWith, mode: 'insensitive' };
+  }
+  const orderBy =
+    sort === 'name'
+      ? [{ name: 'asc' as const }]
+      : [{ followers: { _count: 'desc' as const } }];
+  const [total, rows] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      take,
+      skip,
+      orderBy,
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        avatar: true,
+        _count: { select: { followers: true, posts: true } },
+      },
+    }),
+  ]);
+  const users = rows.map(u => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    avatar: u.avatar,
+    followersCount: u._count.followers,
+    postsCount: u._count.posts,
+  }));
+  res.json({ users, total });
+});
+
 router.get('/top', async (_req, res) => {
   const limit = 8;
   const users = await prisma.user.findMany({
@@ -31,7 +71,18 @@ router.get('/:id', async (req, res) => {
     return res.json(users.map(u => ({ id: u.id, name: u.name, username: u.username, avatar: u.avatar, followersCount: u._count.followers })));
   }
   if (!id) return res.status(400).json({ error: 'Missing id' });
-  const user = await prisma.user.findUnique({ where: { id }, select: { id: true, username: true, name: true, avatar: true, bio: true, createdAt: true } });
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      avatar: true,
+      bio: true,
+      createdAt: true,
+      _count: { select: { posts: true, followers: true, following: true } },
+    },
+  });
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(user);
 });

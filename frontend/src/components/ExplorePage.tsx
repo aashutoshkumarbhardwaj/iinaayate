@@ -19,10 +19,15 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
   const [topAuthors, setTopAuthors] = useState<any[]>([]);
   const [stats, setStats] = useState<{ totalPoems: number; activePoets: number; newThisWeek: number } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [moods, setMoods] = useState<Array<{ mood: string; count: number }>>([]);
   const [audioOnly, setAudioOnly] = useState(false);
   const [moodFilter, setMoodFilter] = useState<string | null>(null);
   const [showMoodChips, setShowMoodChips] = useState(false);
+  const [limit] = useState(100);
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const derivedStats = useMemo(() => {
     if (!feedPosts || feedPosts.length === 0) return null;
     const totalPoems = feedPosts.length;
@@ -37,28 +42,77 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
     return { totalPoems, activePoets: uniqueUsers.size, newThisWeek };
   }, [feedPosts]);
 
+  // Initial and filter-changed load: reset and fetch first page
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [topPosts, feed, users, community, moodsData] = await Promise.all([
+        setLoading(true);
+        setOffset(0);
+        setHasMore(true);
+        const [topPosts, firstPage, users, community, moodsData] = await Promise.all([
           postAPI.getTopPosts(),
-          postAPI.getPosts({ limit: 100, hasAudio: audioOnly, mood: moodFilter || undefined }),
+          postAPI.getPosts({ limit, offset: 0, hasAudio: audioOnly, mood: moodFilter || undefined }),
           userAPI.getTopUsers(),
           statsAPI.getCommunity().catch(() => null),
           moodsAPI.get().catch(() => ({ moods: [] })),
         ]);
         if (mounted) {
           setTrendingPosts(topPosts);
-          setFeedPosts(feed);
+          setFeedPosts(firstPage);
           setTopAuthors(users);
           if (community) setStats(community);
           setMoods(moodsData.moods || []);
+          setHasMore(Array.isArray(firstPage) && firstPage.length === limit);
+          setOffset(limit);
         }
-      } catch {}
+      } catch {} finally {
+        if (mounted) setLoading(false);
+      }
     })();
     return () => { mounted = false; };
-  }, [audioOnly, moodFilter]);
+  }, [audioOnly, moodFilter, limit]);
+
+  // Independent stats fetch with retry so it's not tied to feed filters
+  useEffect(() => {
+    let mounted = true;
+    const fetchStats = async () => {
+      setStatsLoading(true);
+      try {
+        let attempts = 0;
+        let result: any = null;
+        while (attempts < 3 && !result) {
+          try {
+            result = await statsAPI.getCommunity();
+          } catch {
+            attempts += 1;
+            await new Promise((r) => setTimeout(r, 500 * attempts));
+          }
+        }
+        if (mounted && result) setStats(result);
+      } finally {
+        if (mounted) setStatsLoading(false);
+      }
+    };
+    fetchStats();
+    return () => { mounted = false; };
+  }, []);
+
+  // Load more handler
+  const loadMore = async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const next = await postAPI.getPosts({ limit, offset, hasAudio: audioOnly, mood: moodFilter || undefined });
+      setFeedPosts((prev) => [...prev, ...next]);
+      setHasMore(Array.isArray(next) && next.length === limit);
+      setOffset((o) => o + limit);
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const genres = useMemo(() => {
     const map = new Map<string, { count: number; totalLikes: number }>();
@@ -231,8 +285,12 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column - Trending & Filters */}
           <div className="lg:col-span-2">
-            <Tabs defaultValue="trending" className="w-full">
+            <Tabs defaultValue="all" className="w-full">
               <TabsList className="w-full bg-white border border-gray-200 rounded-xl p-1 mb-6">
+                <TabsTrigger value="all" className="flex-1">
+                  <Hash className="w-4 h-4 mr-2" />
+                  All
+                </TabsTrigger>
                 <TabsTrigger value="trending" className="flex-1">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Trending
@@ -243,6 +301,22 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                 </TabsTrigger>
               </TabsList>
 
+              <TabsContent value="all" className="space-y-6">
+                {feedPosts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onPostClick={onPostClick}
+                    onUserClick={onUserClick}
+                  />
+                ))}
+                <div className="mt-2 flex justify-center">
+                  <Button onClick={loadMore} disabled={loading || !hasMore} className="min-w-[160px]">
+                    {loading ? 'Loading…' : hasMore ? 'Load More' : 'No more poems'}
+                  </Button>
+                </div>
+              </TabsContent>
+
               <TabsContent value="trending" className="space-y-6">
                 {trendingPosts.map((post) => (
                   <PostCard
@@ -252,6 +326,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                     onUserClick={onUserClick}
                   />
                 ))}
+                {/* Load More for Trending uses main feed below in Genres tab; keep actions in one place */}
               </TabsContent>
 
               <TabsContent value="genres">
@@ -275,6 +350,11 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                       </p>
                     </button>
                   ))}
+                </div>
+                <div className="mt-6 flex justify-center">
+                  <Button onClick={loadMore} disabled={loading || !hasMore} className="min-w-[160px]">
+                    {loading ? 'Loading…' : hasMore ? 'Load More' : 'No more poems'}
+                  </Button>
                 </div>
               </TabsContent>
             </Tabs>
@@ -366,16 +446,24 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-700">Total Poems</span>
-                  <span className="text-gray-900">{(stats || derivedStats) ? (stats || derivedStats)!.totalPoems.toLocaleString() : '—'}</span>
+                  <span className="text-gray-900">{stats ? stats.totalPoems.toLocaleString() : (statsLoading ? 'Loading…' : '—')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Active Poets</span>
-                  <span className="text-gray-900">{(stats || derivedStats) ? (stats || derivedStats)!.activePoets.toLocaleString() : '—'}</span>
+                  <span className="text-gray-900">{stats ? stats.activePoets.toLocaleString() : (statsLoading ? 'Loading…' : '—')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">This Week</span>
-                  <span className="text-gray-900">{(stats || derivedStats) ? `${(stats || derivedStats)!.newThisWeek.toLocaleString()} new poems` : '—'}</span>
+                  <span className="text-gray-900">{stats ? `${stats.newThisWeek.toLocaleString()} new poems` : (statsLoading ? 'Loading…' : '—')}</span>
                 </div>
+                {!stats && !statsLoading && (
+                  <div className="pt-2">
+                    <Button size="sm" variant="secondary" onClick={async () => {
+                      setStatsLoading(true);
+                      try { const s = await statsAPI.getCommunity(); setStats(s); } finally { setStatsLoading(false); }
+                    }}>Retry</Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

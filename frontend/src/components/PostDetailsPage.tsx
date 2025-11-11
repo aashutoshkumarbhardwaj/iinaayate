@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { commentAPI, postAPI, userAPI } from '../utils/api';
+import { commentAPI, postAPI, userAPI, transliterateAPI } from '../utils/api';
 
 interface PostDetailsPageProps {
   postId: string;
@@ -23,8 +23,20 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
   const [likes, setLikes] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [related, setRelated] = useState<any[]>([]);
+  const [lang, setLang] = useState<'Urdu' | 'Hindi' | 'Hinglish'>('Urdu');
+  const [translits, setTranslits] = useState<{ Hindi?: string; Hinglish?: string }>({});
+  const [translitLoading, setTranslitLoading] = useState(false);
 
   const user = post?.user || null;
+
+  // Compute displayed text with backend transliteration + cache
+  const displayed = useMemo(() => {
+    const base = post?.content || '';
+    if (lang === 'Urdu') return base;
+    if (lang === 'Hindi') return translits.Hindi ?? (translitLoading ? 'Transliterating…' : base);
+    if (lang === 'Hinglish') return translits.Hinglish ?? (translitLoading ? 'Transliterating…' : base);
+    return base;
+  }, [post?.content, lang, translits.Hindi, translits.Hinglish, translitLoading]);
 
   useEffect(() => {
     let mounted = true;
@@ -53,6 +65,32 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
     })();
     return () => { mounted = false; };
   }, [postId]);
+
+  // Fetch transliteration when language changes
+  useEffect(() => {
+    const text = post?.content || '';
+    if (!text) return;
+    if (lang === 'Urdu') return;
+    const target = lang === 'Hindi' ? 'Devanagari' : 'Hinglish';
+    const cacheHit = lang === 'Hindi' ? translits.Hindi : translits.Hinglish;
+    if (cacheHit) return;
+    let mounted = true;
+    (async () => {
+      setTranslitLoading(true);
+      try {
+        const res = await transliterateAPI.convert(text, 'Urdu', target as any);
+        if (!mounted) return;
+        setTranslits((m) => ({ ...m, [lang]: res?.text || '' }));
+      } catch {
+        // Cache base text to avoid retry loops and console spam when API is unavailable
+        if (!mounted) return;
+        setTranslits((m) => ({ ...m, [lang]: text }));
+      } finally {
+        if (mounted) setTranslitLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [lang, post?.content]);
 
   if (!post || !user) {
     return (
@@ -115,6 +153,8 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
     // In a real implementation, this would generate a beautiful image with the poem text
   };
 
+  
+  
   const relatedPosts: any[] = [];
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
@@ -128,17 +168,23 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
         <h1 className="text-5xl font-serif text-gray-900 text-center mb-2">{post.title}</h1>
         <p className="text-center text-gray-500 mb-5">Published on {post.createdAt ? new Date(post.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</p>
 
-        {/* Language chips (non-functional visual chips) */}
+        {/* Language chips */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          {['Urdu','Hindi','English'].map((lang) => (
-            <span key={lang} className="px-3 py-1 rounded-md border border-gray-200 bg-white text-gray-700 text-sm">{lang}</span>
+          {(['Urdu','Hindi','Hinglish'] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLang(l)}
+              className={`px-3 py-1 rounded-md border text-sm ${lang === l ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200'}`}
+            >
+              {l}
+            </button>
           ))}
         </div>
 
         {/* Poem content */}
         <div className="bg-white rounded-2xl border border-gray-200 p-10 shadow-sm mb-6">
           <div className="text-xl text-gray-800 leading-relaxed whitespace-pre-wrap text-center" style={{ fontFamily: 'serif' }}>
-            {post.content}
+            {displayed}
           </div>
         </div>
 

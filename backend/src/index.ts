@@ -228,6 +228,16 @@ console.log('Mounted /collections');
 app.use('/transliterate', transliterateRoutes);
 console.log('Mounted /transliterate');
 
+// Root status endpoint for primary URL
+app.get('/', (_req: express.Request, res: express.Response) => {
+  res.status(200).json({
+    ok: true,
+    name: 'iinaayate-api',
+    version: '1.0.0',
+    docs: '/health',
+  });
+});
+
 // Simple request logger to debug 404s
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] 404 ${req.method} ${req.path}`);

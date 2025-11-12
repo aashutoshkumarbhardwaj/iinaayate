@@ -3,6 +3,8 @@ import { Request, Response, NextFunction } from 'express';
 
 export interface AuthRequest extends Request {
   userId?: string;
+  file?: any;
+  files?: any;
 }
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {

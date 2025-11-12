@@ -1,8 +1,23 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
+
+function getUserIdFromAuth(req: any): string | undefined {
+  const header = req.headers?.['authorization'];
+  if (!header) return undefined;
+  const token = (header as string).split(' ')[1];
+  if (!token) return undefined;
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev');
+    if (typeof payload === 'object' && payload && 'userId' in payload) {
+      return (payload as any).userId as string;
+    }
+  } catch {}
+  return undefined;
+}
 
 router.get('/', async (req, res) => {
   const { limit = '20', offset = '0', genre, userId, mood, hasAudio } = req.query as any;
@@ -23,10 +38,24 @@ router.get('/', async (req, res) => {
       _count: { select: { comments: true, likes: true, saves: true } },
     },
   });
-  res.json(posts);
+  const authUserId = getUserIdFromAuth(req);
+  if (!authUserId) return res.json(posts);
+  const ids = posts.map((p: any) => p.id);
+  if (ids.length === 0) return res.json(posts);
+  const liked = await prisma.like.findMany({
+    where: { userId: authUserId, postId: { in: ids } },
+    select: { postId: true },
+  });
+  const likedSet = new Set(liked.map(l => l.postId));
+  const withLiked = posts.map((p: any) => ({
+    ...p,
+    isLiked: likedSet.has(p.id),
+    likesCount: p._count?.likes,
+  }));
+  res.json(withLiked);
 });
 
-router.get('/top', async (_req, res) => {
+router.get('/top', async (req, res) => {
   const limit = 5;
   const posts = await prisma.post.findMany({
     take: limit,
@@ -36,6 +65,15 @@ router.get('/top', async (_req, res) => {
       _count: { select: { likes: true } },
     },
   });
+  const authUserId = getUserIdFromAuth(req);
+  let likedSet = new Set<string>();
+  if (authUserId && posts.length > 0) {
+    const liked = await prisma.like.findMany({
+      where: { userId: authUserId, postId: { in: posts.map(p => p.id) } },
+      select: { postId: true },
+    });
+    likedSet = new Set(liked.map(l => l.postId));
+  }
   res.json(
     posts.map(p => ({
       id: p.id,
@@ -45,6 +83,7 @@ router.get('/top', async (_req, res) => {
       createdAt: p.createdAt,
       user: p.user,
       likesCount: p._count.likes,
+      isLiked: likedSet.has(p.id),
     }))
   );
 });
@@ -75,6 +114,15 @@ router.get('/:id', async (req, res) => {
         _count: { select: { likes: true } },
       },
     });
+    const authUserIdTop = getUserIdFromAuth(req);
+    let likedSetTop = new Set<string>();
+    if (authUserIdTop && posts.length > 0) {
+      const liked = await prisma.like.findMany({
+        where: { userId: authUserIdTop, postId: { in: posts.map((p: any) => p.id) } },
+        select: { postId: true },
+      });
+      likedSetTop = new Set(liked.map(l => l.postId));
+    }
     return res.json(
       posts.map((p: any) => ({
         id: p.id,
@@ -84,6 +132,7 @@ router.get('/:id', async (req, res) => {
         createdAt: p.createdAt,
         user: p.user,
         likesCount: p._count.likes,
+        isLiked: likedSetTop.has(p.id),
       }))
     );
   }
@@ -96,7 +145,10 @@ router.get('/:id', async (req, res) => {
     },
   });
   if (!post) return res.status(404).json({ error: 'Post not found' });
-  res.json(post);
+  const authUserId = getUserIdFromAuth(req);
+  if (!authUserId) return res.json(post);
+  const like = await prisma.like.findUnique({ where: { userId_postId: { userId: authUserId, postId: id } } });
+  return res.json({ ...post, isLiked: !!like, likesCount: post._count?.likes });
 });
 
 router.post('/', requireAuth, async (req: AuthRequest, res) => {

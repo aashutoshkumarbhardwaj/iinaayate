@@ -8,7 +8,7 @@ import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { authAPI, userAPI } from '../utils/api';
+import { authAPI, userAPI, uploadAvatar } from '../utils/api';
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -38,6 +38,7 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showAvatarInput, setShowAvatarInput] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -162,17 +163,33 @@ export function SettingsPage({ onBack, onLogout }: SettingsPageProps) {
                   <Button variant="outline" size="sm" className="mb-2" onClick={() => setShowAvatarInput((v) => !v)}>
                     {showAvatarInput ? 'Hide' : 'Change Avatar'}
                   </Button>
-                  <p className="text-sm text-gray-500">Paste an image URL for now (DB stored). File uploads can be added later.</p>
+                  <p className="text-sm text-gray-500">Upload a square image (max 5MB). We’ll crop it to fit.</p>
                   {showAvatarInput && (
                     <div className="mt-2 flex items-center gap-2">
-                      <Input
-                        placeholder="https://..."
-                        value={profile.avatar}
-                        onChange={(e) => setProfile({ ...profile, avatar: e.target.value })}
-                        className="flex-1"
-                      />
-                      <Button size="sm" onClick={handleSaveProfile} disabled={saving}>
-                        Save
+                      <Input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} />
+                      <Button
+                        size="sm"
+                        disabled={saving || !avatarFile || !userId}
+                        onClick={async () => {
+                          if (!avatarFile || !userId) return;
+                          setSaving(true);
+                          setError(null);
+                          setSuccess(null);
+                          try {
+                            const { url } = await uploadAvatar(userId, avatarFile);
+                            setProfile((p) => ({ ...p, avatar: url }));
+                            localStorage.setItem('currentUserAvatar', url);
+                            window.dispatchEvent(new Event('avatar-changed'));
+                            setSuccess('Avatar updated.');
+                            setAvatarFile(null);
+                          } catch (e: any) {
+                            setError(e?.message || 'Avatar upload failed');
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                      >
+                        Upload
                       </Button>
                     </div>
                   )}

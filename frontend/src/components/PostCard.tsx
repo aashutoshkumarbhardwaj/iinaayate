@@ -2,6 +2,8 @@ import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { useState } from 'react';
+import { postAPI } from '../utils/api';
 
 interface PostCardProps {
   post: any;
@@ -20,6 +22,12 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
   const createdDate = post.createdAt ? new Date(post.createdAt) : null;
   const createdAt = createdDate ? new Date(createdDate).toLocaleString() : '';
   const counts = post._count || {};
+
+  // Inline like state
+  const [isLiked, setIsLiked] = useState<boolean>(!!post.isLiked);
+  const [likes, setLikes] = useState<number>(
+    typeof post.likesCount === 'number' ? post.likesCount : (counts.likes ?? 0)
+  );
 
   const timeAgo = (date?: Date | null) => {
     if (!date) return '';
@@ -41,6 +49,27 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
     if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'm';
     if (v >= 1_000) return (v / 1_000).toFixed(1) + 'k';
     return String(v);
+  };
+
+  const handleToggleLike = () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      // Not authenticated - ignore for now (parent gating handles auth)
+      return;
+    }
+    const next = !isLiked;
+    setIsLiked(next);
+    setLikes((prev) => (next ? prev + 1 : Math.max(0, prev - 1)));
+    (async () => {
+      try {
+        if (next) await postAPI.likePost(post.id);
+        else await postAPI.unlikePost(post.id);
+      } catch {
+        // rollback
+        setIsLiked(!next);
+        setLikes((prev) => (!next ? prev + 1 : Math.max(0, prev - 1)));
+      }
+    })();
   };
 
   return (
@@ -88,13 +117,14 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
         )}
       </div>
 
-      {/* Footer actions */}
+      {/* Footer actions */
+      }
       <div className="mt-5 pt-4 border-t border-rose-100/80">
         <div className="flex items-center gap-6 text-gray-600 bg-rose-50/40 border border-rose-100 rounded-xl px-4 py-2">
-          <div className="flex items-center gap-2">
-            <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-600 text-rose-600' : ''}`} />
-            <span className="text-sm">{fmt(counts.likes)}</span>
-          </div>
+          <button onClick={handleToggleLike} className={`flex items-center gap-2 ${isLiked ? 'text-rose-600' : ''}`}>
+            <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-600' : ''}`} />
+            <span className="text-sm">{fmt(likes)}</span>
+          </button>
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4" />
             <span className="text-sm">{fmt(counts.comments)}</span>

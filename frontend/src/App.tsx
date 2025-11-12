@@ -41,12 +41,22 @@ export default function App() {
     const token = localStorage.getItem('authToken');
     if (token) {
       setAuthToken(token);
-      setIsAuthenticated(true);
       (async () => {
         try {
           const me = await authAPI.me();
           if (me?.user?.id) localStorage.setItem('currentUserId', me.user.id);
-        } catch {}
+          if (me?.user?.avatar) localStorage.setItem('currentUserAvatar', me.user.avatar);
+          setIsAuthenticated(true);
+          if (typeof window !== 'undefined') window.dispatchEvent(new Event('avatar-changed'));
+        } catch {
+          // Bad token: clear and mark unauthenticated
+          setIsAuthenticated(false);
+          setAuthToken(null);
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('currentUserId');
+          localStorage.removeItem('currentUserAvatar');
+          if (typeof window !== 'undefined') window.dispatchEvent(new Event('avatar-changed'));
+        }
       })();
     }
   }, []);
@@ -61,6 +71,8 @@ export default function App() {
     setAuthToken(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUserId');
+    localStorage.removeItem('currentUserAvatar');
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('avatar-changed'));
   };
 
   const handleNavigate = (page: string) => {
@@ -86,17 +98,29 @@ export default function App() {
     setNavState({ page: 'home' });
   };
 
-  // Show auth page if not authenticated
-  if (!isAuthenticated) {
-    return <AuthPage onAuth={handleAuth} />;
-  }
+  // Only gate specific pages behind auth; allow public browsing by default.
+  // Profile: gate only when user is trying to access their own profile (or no userId provided).
+  const protectedPages: Page[] = ['write', 'notifications', 'settings', 'collections'];
+  const currentUserIdLS = typeof window !== 'undefined' ? localStorage.getItem('currentUserId') : null;
+  const isSelfProfileIntent = navState.page === 'profile' && (!navState.userId || (currentUserIdLS && navState.userId === currentUserIdLS));
+  const mustAuth = !isAuthenticated && (protectedPages.includes(navState.page) || isSelfProfileIntent);
+
+  // After auth, if user intended to view their profile but userId wasn't set yet, fix it
+  useEffect(() => {
+    if (isAuthenticated && navState.page === 'profile' && !navState.userId) {
+      const id = localStorage.getItem('currentUserId');
+      if (id) setNavState({ page: 'profile', userId: id });
+      else setNavState({ page: 'home' });
+    }
+  }, [isAuthenticated, navState.page, navState.userId]);
 
   return (
     <div className="min-h-screen bg-white">
       <Toaster position="top-center" />
-      <Navigation currentPage={navState.page} onNavigate={handleNavigate} onLogout={handleLogout} />
+      <Navigation currentPage={navState.page} onNavigate={handleNavigate} onLogout={handleLogout} isAuthenticated={isAuthenticated} />
+      {mustAuth && <AuthPage onAuth={handleAuth} />}
       
-      {navState.page === 'home' && (
+      {!mustAuth && navState.page === 'home' && (
         <HomePage
           onPostClick={handlePostClick}
           onUserClick={handleUserClick}
@@ -104,7 +128,7 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'explore' && (
+      {!mustAuth && navState.page === 'explore' && (
         <ExplorePage
           onPostClick={handlePostClick}
           onUserClick={handleUserClick}
@@ -113,7 +137,7 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'daily' && (
+      {!mustAuth && navState.page === 'daily' && (
         <DailyPoemPage
           onBack={handleBack}
           onPostClick={handlePostClick}
@@ -121,11 +145,11 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'events' && (
+      {!mustAuth && navState.page === 'events' && (
         <EventsPage onBack={handleBack} onView={(id) => setNavState({ page: 'event', eventId: id })} />
       )}
 
-      {navState.page === 'event' && navState.eventId && (
+      {!mustAuth && navState.page === 'event' && navState.eventId && (
         <EventDetailsPage
           eventId={navState.eventId}
           onBack={() => setNavState({ page: 'events' })}
@@ -133,19 +157,19 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'writers' && (
+      {!mustAuth && navState.page === 'writers' && (
         <WritersPage onBack={handleBack} onUserClick={handleUserClick} />
       )}
 
-      {navState.page === 'blog' && (
+      {!mustAuth && navState.page === 'blog' && (
         <BlogPage onBack={handleBack} onBlogClick={(id) => setNavState({ page: 'blogpost', blogPostId: id })} />
       )}
 
-      {navState.page === 'write' && (
+      {navState.page === 'write' && !mustAuth && (
         <WritePage onBack={handleBack} />
       )}
 
-      {navState.page === 'search' && (
+      {!mustAuth && navState.page === 'search' && (
         <SearchPage
           onBack={handleBack}
           onPostClick={handlePostClick}
@@ -153,7 +177,7 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'notifications' && (
+      {navState.page === 'notifications' && !mustAuth && (
         <NotificationsPage
           onBack={() => setNavState({ page: 'home' })}
           onPostClick={handlePostClick}
@@ -161,26 +185,26 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'settings' && (
+      {navState.page === 'settings' && !mustAuth && (
         <SettingsPage onBack={() => setNavState({ page: 'home' })} onLogout={handleLogout} />
       )}
 
-      {navState.page === 'help' && (
+      {!mustAuth && navState.page === 'help' && (
         <HelpPage onBack={() => setNavState({ page: 'home' })} />
       )}
 
-      {navState.page === 'store' && (
+      {!mustAuth && navState.page === 'store' && (
         <StorePage onBack={() => setNavState({ page: 'home' })} />
       )}
 
-      {navState.page === 'collections' && (
+      {navState.page === 'collections' && !mustAuth && (
         <CollectionsPage
           onBack={handleBack}
           onCollectionClick={(id) => console.log('Collection clicked:', id)}
         />
       )}
 
-      {navState.page === 'profile' && navState.userId && (
+      {!mustAuth && navState.page === 'profile' && navState.userId && (
         <UserProfilePage
           userId={navState.userId}
           onBack={handleBack}
@@ -189,7 +213,7 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'post' && navState.postId && (
+      {!mustAuth && navState.page === 'post' && navState.postId && (
         <PostDetailsPage
           postId={navState.postId}
           onBack={handleBack}
@@ -198,7 +222,7 @@ export default function App() {
         />
       )}
 
-      {navState.page === 'blogpost' && navState.blogPostId && (
+      {!mustAuth && navState.page === 'blogpost' && navState.blogPostId && (
         <BlogDetailsPage
           postId={navState.blogPostId}
           onBack={() => setNavState({ page: 'blog' })}

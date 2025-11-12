@@ -1,5 +1,5 @@
 import { Search, PenSquare, User, Heart, Bell, Settings, BookMarked } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -15,10 +15,35 @@ interface NavigationProps {
   currentPage: string;
   onNavigate: (page: string) => void;
   onLogout?: () => void;
+  isAuthenticated?: boolean;
 }
 
-export function Navigation({ currentPage, onNavigate, onLogout }: NavigationProps) {
+export function Navigation({ currentPage, onNavigate, onLogout, isAuthenticated }: NavigationProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string>(
+    typeof window !== 'undefined'
+      ? localStorage.getItem('currentUserAvatar') || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop'
+      : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop'
+  );
+
+  useEffect(() => {
+    const handler = () => {
+      const url = localStorage.getItem('currentUserAvatar');
+      if (url) setAvatarUrl(url);
+    };
+    window.addEventListener('avatar-changed', handler);
+    return () => window.removeEventListener('avatar-changed', handler);
+  }, []);
+
+  // Reflect auth changes in avatar and controls
+  useEffect(() => {
+    if (isAuthenticated) {
+      const url = localStorage.getItem('currentUserAvatar');
+      if (url) setAvatarUrl(url);
+    } else {
+      setAvatarUrl('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop');
+    }
+  }, [isAuthenticated]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,48 +142,58 @@ export function Navigation({ currentPage, onNavigate, onLogout }: NavigationProp
             </Button>
             
             {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onNavigate('notifications')}
-              className="relative"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-            </Button>
+            {isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onNavigate('notifications')}
+                className="relative"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+              </Button>
+            )}
 
-            {/* Profile Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage
-                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
-                      alt="User"
-                    />
-                    <AvatarFallback>A</AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => onNavigate('profile')}>
-                  <User className="w-4 h-4 mr-2" />
-                  My Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onNavigate('collections')}>
-                  <BookMarked className="w-4 h-4 mr-2" />
-                  My Collections
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onNavigate('settings')}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-rose-600" onClick={() => onLogout?.()}>
-                  Log Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Profile/Login */}
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={avatarUrl} alt="User" />
+                      <AvatarFallback>A</AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => onNavigate('profile')}>
+                    <User className="w-4 h-4 mr-2" />
+                    My Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onNavigate('collections')}>
+                    <BookMarked className="w-4 h-4 mr-2" />
+                    My Collections
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onNavigate('settings')}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-rose-600" onClick={() => onLogout?.()}>
+                    Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onNavigate('settings')}
+                className="ml-2"
+              >
+                Login
+              </Button>
+            )}
           </div>
         </div>
       </div>

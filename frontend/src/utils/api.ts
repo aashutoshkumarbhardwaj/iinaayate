@@ -10,6 +10,23 @@ export function getAuthToken() {
   return authToken;
 }
 
+export async function uploadAvatar(userId: string, file: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  const headers: HeadersInit = {};
+  if (authToken) (headers as any)['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(`${API_BASE}/users/${userId}/avatar`, {
+    method: 'POST',
+    headers,
+    body: form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 async function apiRequest(
   endpoint: string,
   options: RequestInit = {}

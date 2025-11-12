@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import multer from 'multer';
+import { cloudinary, cloudinaryConfigured } from '../lib/cloudinary';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 // List users with pagination and filters
 router.get('/', async (req, res) => {
@@ -42,6 +45,34 @@ router.get('/', async (req, res) => {
     postsCount: u._count.posts,
   }));
   res.json({ users, total });
+});
+
+// Upload avatar image and update user.avatar
+router.post('/:id/avatar', requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params as { id: string };
+    if (!id) return res.status(400).json({ error: 'Missing id' });
+    if (req.userId !== id) return res.status(403).json({ error: 'Forbidden' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!cloudinaryConfigured) return res.status(501).json({ error: 'Image upload not configured' });
+
+    const buffer = req.file.buffer;
+    const url: string = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'iinaayate/avatars', resource_type: 'image', transformation: [{ width: 256, height: 256, crop: 'fill', gravity: 'auto' }] },
+        (err: any, result: any) => {
+          if (err || !result?.secure_url) return reject(err || new Error('Upload failed'));
+          resolve(result.secure_url as string);
+        }
+      );
+      stream.end(buffer);
+    });
+
+    await prisma.user.update({ where: { id }, data: { avatar: url } });
+    return res.json({ url });
+  } catch (e) {
+    return res.status(500).json({ error: 'Avatar upload failed' });
+  }
 });
 
 router.get('/top', async (_req, res) => {

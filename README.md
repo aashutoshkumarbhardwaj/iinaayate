@@ -2,8 +2,21 @@
 <p align="center"> <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=160&section=header&text=Inayate+🖋️&fontSize=60&fontAlignY=35&desc=Share+Poetry+%7C+Discover+Voices&descAlignY=60&descAlign=50" alt="Inayate Banner" /> </p> <p align="center"> <a href="#"><img src="https://img.shields.io/badge/Frontend-Reflex%2FReact-lightgrey?style=for-the-badge&logo=python" alt="frontend" /></a> <a href="#"><img src="https://img.shields.io/badge/Media-Cloudinary-blueviolet?style=for-the-badge&logo=cloudinary" alt="cloudinary" /></a> <a href="#"><img src="https://img.shields.io/badge/Backend-Render-orange?style=for-the-badge&logo=render" alt="render" /></a> <a href="#"><img src="https://img.shields.io/badge/DB-Neon%20(Postgres)-green?style=for-the-badge&logo=postgresql" alt="neon"/></a> <a href="#"><img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="license" /></a> </p>
 ✨ What is Inayate?
 
-Inayate is a social platform for poets and poetry-lovers.
-Users can sign up, write and publish their poems, upload a profile photo, score poems (rate/upvote), comment, and follow other writers. All user media is stored on Cloudinary for fast image handling; the backend API runs on Render; the database is Postgres hosted on Neon; the frontend is built with Reflex/React (or your frontend stack) and deployed on Vercel (or wherever you choose).
+# 🌿 Inayate — Share Poetry • Discover Voices
+
+<p align="center">
+  <img src="assets/logo-inayate.svg" alt="Inayate Logo" width="820" />
+</p>
+
+<p align="center">
+  <a href="#"><img src="https://img.shields.io/badge/Inayate-Share%20Poetry-ff9a9e?style=for-the-badge" alt="Inayate" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Media-Cloudinary-43e97b?style=for-the-badge&logo=cloudinary" alt="Cloudinary" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Backend-Render-F57C00?style=for-the-badge&logo=render" alt="Render" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/DB-Neon(Postgres)-2ECC71?style=for-the-badge&logo=postgresql" alt="Neon" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/License-MIT-6C63FF?style=for-the-badge" alt="License" /></a>
+</p>
+
+---
 
 🌟 Key Features
 

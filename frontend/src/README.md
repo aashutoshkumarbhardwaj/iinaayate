@@ -1,6 +1,6 @@
 # iinaayate - Poetry Sharing Platform
 
-A beautiful, full-featured poetry sharing platform inspired by Poetistic.com, built with React, TypeScript, Tailwind CSS, and Supabase.
+A beautiful, full-featured poetry sharing platform inspired by alot of website, built with React, TypeScript, Tailwind CSS, and Supabase.
 
 ## 🌟 Features
 
@@ -204,7 +204,7 @@ Potential features to add:
 ## 🎨 Inspired By
 
 This project takes inspiration from:
-- **Poetistic.com** - Poetry sharing and community
+- **iinaaayte.com** - Poetry sharing and community
 - **Medium** - Reading experience and typography
 - **Twitter** - Social interactions and engagement
 

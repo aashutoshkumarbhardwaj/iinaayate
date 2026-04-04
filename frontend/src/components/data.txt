@@ -1,0 +1,757 @@
+diff --git a//Users/aashutoshkumarbhardwaj/iinaayate/frontend/src/components/HomePage.tsx b//Users/aashutoshkumarbhardwaj/iinaayate/frontend/src/components/HomePage.tsx
+deleted file mode 100644
+--- a//Users/aashutoshkumarbhardwaj/iinaayate/frontend/src/components/HomePage.tsx
++++ /dev/null
+@@ -1,752 +0,0 @@
+-import {
+-  ArrowRight,
+-  AudioLines,
+-  BookOpenText,
+-  Calendar,
+-  ChevronLeft,
+-  ChevronRight,
+-  Compass,
+-  Leaf,
+-  PenLine,
+-  ScrollText,
+-  Search as SearchIcon,
+-  Sparkles,
+-  TrendingUp,
+-  Users,
+-} from 'lucide-react';
+-import { useEffect, useState } from 'react';
+-import { Helmet } from 'react-helmet-async';
+-import { motion } from 'framer-motion';
+-import { eventsAPI, postAPI, statsAPI, userAPI } from '../utils/api';
+-import { PostCard } from './PostCard';
+-import { TopPoemsCarousel } from './TopPoemsCarousel';
+-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+-import { Button } from './ui/button';
+-import { Input } from './ui/input';
+-import { FadeIn, FadeInStagger } from './ui/motion';
+-
+-interface HomePageProps {
+-  onPostClick: (postId: string) => void;
+-  onUserClick: (userId: string) => void;
+-  onNavigate?: (page: string, options?: { searchQuery?: string }) => void;
+-}
+-
+-const categories = [
+-  {
+-    title: 'Ghazal',
+-    desc: 'Classical couplets, longing, and lyrical rhythm.',
+-    icon: ScrollText,
+-    accent: 'from-slate-100/90 via-white/80 to-amber-100/70',
+-    spanClass: 'md:col-span-4 xl:col-span-7 xl:row-span-2 min-h-[220px] lg:min-h-[260px]',
+-  },
+-  {
+-    title: 'Shayari',
+-    desc: 'Short emotional pieces made to be shared and saved.',
+-    icon: Sparkles,
+-    accent: 'from-sky-100/80 via-white/80 to-indigo-100/70',
+-    spanClass: 'md:col-span-2 xl:col-span-5 min-h-[220px] lg:min-h-[260px]',
+-  },
+-  {
+-    title: 'Nazm',
+-    desc: 'Narrative poems with room for voice and atmosphere.',
+-    icon: PenLine,
+-    accent: 'from-emerald-100/80 via-white/80 to-teal-100/70',
+-    spanClass: 'md:col-span-3 xl:col-span-4 min-h-[200px] lg:min-h-[240px]',
+-  },
+-  {
+-    title: 'Spoken Word',
+-    desc: 'Performance-first writing with energy and momentum.',
+-    icon: AudioLines,
+-    accent: 'from-violet-100/80 via-white/80 to-cyan-100/70',
+-    spanClass: 'md:col-span-3 xl:col-span-8 xl:row-span-2 min-h-[220px] lg:min-h-[260px]',
+-  },
+-];
+-
+-const quickActions = [
+-  {
+-    title: 'Explore poems',
+-    desc: 'Browse fresh writing and trending voices.',
+-    icon: Compass,
+-    page: 'explore',
+-  },
+-  {
+-    title: 'Open events',
+-    desc: 'See the next readings and live sessions.',
+-    icon: Calendar,
+-    page: 'events',
+-  },
+-  {
+-    title: 'Start writing',
+-    desc: 'Publish a new draft into the community feed.',
+-    icon: PenLine,
+-    page: 'write',
+-  },
+-];
+-
+-const bentoCard =
+-  'group relative overflow-hidden rounded-[28px] border border-white/40 bg-white/10 backdrop-blur-2xl shadow-[0_18px_60px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-white/60 hover:shadow-[0_28px_80px_rgba(15,23,42,0.14)]';
+-
+-const bentoGlow =
+-  'pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.16),transparent_34%)]';
+-
+-export function HomePage({ onPostClick, onUserClick, onNavigate }: HomePageProps) {
+-  const [featuredPoetIndex, setFeaturedPoetIndex] = useState(0);
+-  const [featuredPoets, setFeaturedPoets] = useState<any[]>([]);
+-  const [posts, setPosts] = useState<any[]>([]);
+-  const [topPosts, setTopPosts] = useState<any[]>([]);
+-  const [qotd, setQotd] = useState<any | null>(null);
+-  const [topFive, setTopFive] = useState<any[]>([]);
+-  const [followed, setFollowed] = useState<Record<string, boolean>>({});
+-  const [events, setEvents] = useState<any[]>([]);
+-  const [searchText, setSearchText] = useState('');
+-  const [communityStats, setCommunityStats] = useState<any | null>(null);
+-
+-  useEffect(() => {
+-    let mounted = true;
+-
+-    (async () => {
+-      try {
+-        const [users, feed, top, evtsWrap, stats] = await Promise.all([
+-          userAPI.getTopUsers(),
+-          postAPI.getPosts({ limit: 10 }),
+-          postAPI.getTopPosts(),
+-          eventsAPI.getEvents().catch(() => ({ events: [] })),
+-          statsAPI.getCommunity().catch(() => null),
+-        ]);
+-
+-        if (!mounted) return;
+-
+-        const evts = Array.isArray(evtsWrap as any) ? (evtsWrap as any) : ((evtsWrap as any)?.events ?? []);
+-        setFeaturedPoets(Array.isArray(users) ? users : []);
+-        setPosts(Array.isArray(feed) ? feed : []);
+-        setTopPosts(Array.isArray(top) ? top : []);
+-        setEvents(Array.isArray(evts) ? evts : []);
+-        setCommunityStats(stats);
+-
+-        const todayKey = new Date().toISOString().slice(0, 10);
+-        const seed = xmur3(todayKey)();
+-        const rng = mulberry32(seed);
+-        const totalPoems: number | undefined = (stats && (stats.totalPoems || stats.poems || stats.posts)) as any;
+-
+-        if (typeof totalPoems === 'number' && totalPoems > 0) {
+-          const index = Math.floor(rng() * totalPoems);
+-          try {
+-            const one = await postAPI.getPosts({ limit: 1, offset: index });
+-            if (Array.isArray(one) && one[0]) setQotd(one[0]);
+-            else if ((top || []).length > 0) setQotd(top[Math.floor(rng() * top.length)]);
+-            else setQotd(null);
+-          } catch {
+-            if ((top || []).length > 0) setQotd(top[Math.floor(rng() * top.length)]);
+-            else setQotd(null);
+-          }
+-        } else if ((top || []).length > 0) {
+-          setQotd(top[Math.floor(rng() * top.length)]);
+-        } else {
+-          setQotd(null);
+-        }
+-
+-        const pool = ((Array.isArray(feed) ? feed : []).length ? feed : top || []).filter(Boolean);
+-        const picks = pickUniqueIndices(pool.length, 5, rng).map((i) => pool[i]).filter(Boolean);
+-        setTopFive(picks);
+-      } catch {
+-        // Keep the landing page resilient even if some endpoints fail.
+-      }
+-    })();
+-
+-    return () => {
+-      mounted = false;
+-    };
+-  }, []);
+-
+-  function xmur3(str: string) {
+-    let h = 1779033703 ^ str.length;
+-    for (let i = 0; i < str.length; i++) {
+-      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+-      h = (h << 13) | (h >>> 19);
+-    }
+-    return function () {
+-      h = Math.imul(h ^ (h >>> 16), 2246822507);
+-      h = Math.imul(h ^ (h >>> 13), 3266489909);
+-      return (h ^= h >>> 16) >>> 0;
+-    };
+-  }
+-
+-  function mulberry32(a: number) {
+-    return function () {
+-      let t = (a += 0x6d2b79f5);
+-      t = Math.imul(t ^ (t >>> 15), t | 1);
+-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+-    };
+-  }
+-
+-  function pickUniqueIndices(n: number, k: number, rng: () => number) {
+-    const idxs: number[] = [];
+-    const max = Math.max(0, Math.min(n, k));
+-    while (idxs.length < max) {
+-      const i = Math.floor(rng() * n);
+-      if (!idxs.includes(i)) idxs.push(i);
+-    }
+-    return idxs;
+-  }
+-
+-  const scrollPoets = (direction: 'left' | 'right') => {
+-    if (direction === 'left') {
+-      setFeaturedPoetIndex(Math.max(0, featuredPoetIndex - 4));
+-    } else {
+-      setFeaturedPoetIndex(Math.min(Math.max(0, featuredPoets.length - 4), featuredPoetIndex + 4));
+-    }
+-  };
+-
+-  const handleFollowToggle = async (userId: string) => {
+-    const currentUserId = localStorage.getItem('currentUserId');
+-    if (currentUserId && currentUserId === userId) return;
+-
+-    const isNow = !followed[userId];
+-    setFollowed((m) => ({ ...m, [userId]: isNow }));
+-    try {
+-      if (isNow) await userAPI.follow(userId);
+-      else await userAPI.unfollow(userId);
+-    } catch {
+-      setFollowed((m) => ({ ...m, [userId]: !isNow }));
+-    }
+-  };
+-
+-  const goSearch = () => onNavigate?.('search', searchText.trim() ? { searchQuery: searchText.trim() } : undefined);
+-  const goExplore = () => onNavigate?.('explore');
+-  const goEvents = () => onNavigate?.('events');
+-  const goWrite = () => onNavigate?.('write');
+-  const navigateTo = (page: string) => onNavigate?.(page);
+-
+-  const heroStats = [
+-    {
+-      label: 'Poems shared',
+-      value: `${communityStats?.totalPoems || communityStats?.posts || topPosts.length || 1200}+`,
+-      icon: BookOpenText,
+-    },
+-    {
+-      label: 'Writers active',
+-      value: `${communityStats?.totalUsers || communityStats?.users || featuredPoets.length || 320}+`,
+-      icon: Users,
+-    },
+-    {
+-      label: 'Trending today',
+-      value: `${topFive.length || topPosts.length || 12}`,
+-      icon: TrendingUp,
+-    },
+-  ];
+-
+-  const spotlightPost = topPosts[0] || qotd || posts[0] || null;
+-  const feedPreview = posts.slice(0, 4);
+-  const visiblePoets = featuredPoets.slice(featuredPoetIndex, featuredPoetIndex + 4);
+-
+-  return (
+-    <div className="relative min-h-screen overflow-hidden">
+-      <Helmet>
+-        <title>iinaayate – Hindi Urdu Poetry & Shayari</title>
+-        <meta
+-          name="description"
+-          content="Read, write, and share Hindi, Urdu, and Hinglish poetry and shayari on iinaayate. Discover ghazals, nazms, sher, and more."
+-        />
+-        <link rel="canonical" href="/" />
+-        <meta property="og:title" content="iinaayate – Hindi Urdu Poetry & Shayari" />
+-        <meta property="og:description" content="Read, write, and share poetry and shayari in Hindi, Urdu, and Hinglish." />
+-      </Helmet>
+-
+-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+-        <div className="absolute left-[-8%] top-[-6%] h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
+-        <div className="absolute right-[-4%] top-[12%] h-96 w-96 rounded-full bg-blue-200/20 blur-3xl" />
+-        <div className="absolute bottom-[10%] left-[20%] h-80 w-80 rounded-full bg-amber-200/16 blur-3xl" />
+-      </div>
+-
+-      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+-        <FadeIn className={`${bentoCard} p-6 sm:p-8 lg:p-10`}>
+-          <div className={bentoGlow} />
+-          <div className="grid gap-8 lg:grid-cols-[1.618fr,1fr] lg:items-start">
+-            <div className="group relative overflow-hidden rounded-[24px] border border-white/40 bg-[linear-gradient(135deg,rgba(255,255,255,0.24),rgba(255,255,255,0.08)),radial-gradient(circle_at_top_left,rgba(125,211,252,0.18),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(253,224,71,0.14),transparent_32%)] p-6 shadow-[0_16px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_26px_70px_rgba(15,23,42,0.12)] sm:p-8">
+-              <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.4),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(56,189,248,0.16),transparent_32%)]" />
+-              <div className="relative flex max-w-3xl flex-col gap-6">
+-                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/60 bg-white/30 px-4 py-2 text-xs uppercase tracking-[0.28em] text-slate-700 backdrop-blur-xl">
+-                  <Sparkles className="h-3.5 w-3.5 text-sky-600" />
+-                  Home for Hindi and Urdu verse
+-                </div>
+-
+-                <div className="space-y-4">
+-                  <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.05em] text-slate-950 sm:text-5xl lg:text-6xl">
+-                    Discover poems that feel personal, not algorithmic.
+-                  </h1>
+-                  <p className="max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
+-                    Read standout ghazals, nazms, and shayari, follow new voices, and publish your own work in a clean,
+-                    discovery-first space built around poetry.
+-                  </p>
+-                </div>
+-
+-                <div className="flex w-full flex-col gap-3 rounded-[22px] border border-white/40 bg-white/10 p-3 shadow-[0_14px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:flex-row sm:items-center">
+-                  <div className="flex flex-1 items-center gap-3 rounded-[18px] border border-white/40 bg-white/30 px-4 py-3 backdrop-blur-xl">
+-                    <SearchIcon className="h-5 w-5 text-slate-400" />
+-                    <Input
+-                      value={searchText}
+-                      onChange={(e) => setSearchText(e.target.value)}
+-                      onKeyDown={(e) => {
+-                        if (e.key === 'Enter') goSearch();
+-                      }}
+-                      placeholder="Search a poet, mood, genre, or line..."
+-                      className="h-auto border-0 bg-transparent px-0 py-0 text-base text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
+-                    />
+-                  </div>
+-                  <div className="flex flex-wrap gap-3">
+-                    <Button
+-                      onClick={goSearch}
+-                      className="h-12 rounded-[18px] border border-slate-950 bg-slate-950 px-6 text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_18px_35px_rgba(15,23,42,0.22)]"
+-                    >
+-                      Search
+-                    </Button>
+-                    <Button
+-                      variant="outline"
+-                      onClick={goWrite}
+-                      className="h-12 rounded-[18px] border border-white/50 bg-white/40 px-6 text-slate-900 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/55 hover:shadow-[0_16px_35px_rgba(15,23,42,0.12)]"
+-                    >
+-                      Start writing
+-                    </Button>
+-                  </div>
+-                </div>
+-
+-                <div className="flex flex-wrap gap-3">
+-                  {['Urdu', 'Hindi', 'Hinglish', 'Romantic', 'Melancholy', 'Performance'].map((term) => (
+-                    <button
+-                      key={term}
+-                      onClick={() => onNavigate?.('search', { searchQuery: term })}
+-                      className="rounded-full border border-white/50 bg-white/25 px-4 py-2 text-sm text-slate-700 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/70 hover:bg-white/40 hover:text-slate-950 hover:shadow-[0_14px_30px_rgba(15,23,42,0.10)]"
+-                    >
+-                      {term}
+-                    </button>
+-                  ))}
+-                </div>
+-              </div>
+-            </div>
+-
+-            <FadeInStagger className="grid gap-4">
+-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+-                {heroStats.map((item) => {
+-                  const Icon = item.icon;
+-                  return (
+-                    <FadeIn
+-                      key={item.label}
+-                      className="group relative min-h-[150px] overflow-hidden rounded-[24px] border border-white/40 bg-white/10 p-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.14)]"
+-                    >
+-                      <div className={bentoGlow} />
+-                      <div className="flex items-start justify-between gap-4">
+-                        <div>
+-                          <p className="text-3xl font-semibold tracking-tight text-slate-950">{item.value}</p>
+-                          <p className="mt-2 text-sm text-slate-500">{item.label}</p>
+-                        </div>
+-                        <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-slate-950 text-white">
+-                          <Icon className="h-5 w-5" />
+-                        </div>
+-                      </div>
+-                    </FadeIn>
+-                  );
+-                })}
+-              </div>
+-
+-              <FadeIn className={`${bentoCard} min-h-[280px] p-5`}>
+-                <div className={bentoGlow} />
+-                <div className="flex items-center justify-between gap-3">
+-                  <div>
+-                    <p className="section-kicker">Right now</p>
+-                    <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">Quick actions</h2>
+-                  </div>
+-                  <ArrowRight className="h-5 w-5 text-slate-400" />
+-                </div>
+-                <div className="mt-5 space-y-3">
+-                  {quickActions.map((item) => {
+-                    const Icon = item.icon;
+-                    return (
+-                      <button
+-                        key={item.title}
+-                        onClick={() => navigateTo(item.page)}
+-                        className="group flex w-full items-start gap-4 rounded-[18px] border border-white/50 bg-white/20 px-4 py-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/70 hover:bg-white/30 hover:shadow-[0_20px_45px_rgba(15,23,42,0.12)]"
+-                      >
+-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-white/40 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-transform duration-300 group-hover:scale-105">
+-                          <Icon className="h-5 w-5" />
+-                        </div>
+-                        <div>
+-                          <p className="text-sm font-medium text-slate-950">{item.title}</p>
+-                          <p className="mt-1 text-sm leading-6 text-slate-500">{item.desc}</p>
+-                        </div>
+-                      </button>
+-                    );
+-                  })}
+-                </div>
+-              </FadeIn>
+-            </FadeInStagger>
+-          </div>
+-        </FadeIn>
+-
+-        <div className="grid gap-8 xl:grid-cols-[1.618fr,1fr]">
+-          <FadeIn className={`${bentoCard} p-6 sm:p-8 lg:p-9`}>
+-            <div className={bentoGlow} />
+-            <div className="relative overflow-hidden rounded-[30px] border border-white/45 bg-[linear-gradient(135deg,rgba(255,255,255,0.38),rgba(255,255,255,0.16)),radial-gradient(circle_at_top_left,rgba(255,255,255,0.75),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(250,204,21,0.12),transparent_34%)] p-6 sm:p-8">
+-              <motion.div
+-                animate={{ y: [0, -6, 0], opacity: [0.55, 0.95, 0.55] }}
+-                transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+-                className="pointer-events-none absolute left-[-3rem] top-[-3rem] h-40 w-40 rounded-full bg-sky-300/20 blur-3xl"
+-              />
+-              <motion.div
+-                animate={{ y: [0, 8, 0], x: [0, 6, 0] }}
+-                transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+-                className="pointer-events-none absolute bottom-[-2rem] right-[-2rem] h-48 w-48 rounded-full bg-amber-200/20 blur-3xl"
+-              />
+-              <div className="relative flex flex-wrap items-start justify-between gap-4">
+-                <div>
+-                  <p className="section-kicker">Daily spotlight</p>
+-                  <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+-                    A poem worth slowing down for
+-                  </h2>
+-                </div>
+-                <Button
+-                  variant="ghost"
+-                  onClick={goExplore}
+-                  className="rounded-full border border-white/50 bg-white/35 px-4 text-slate-700 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/50 hover:text-slate-950 hover:shadow-[0_14px_30px_rgba(15,23,42,0.10)]"
+-                >
+-                  Browse more <ArrowRight className="ml-2 h-4 w-4" />
+-                </Button>
+-              </div>
+-
+-            {qotd ? (
+-              <button
+-                onClick={() => onPostClick(qotd.id)}
+-                className="group mt-6 block w-full text-left transition-transform duration-300 hover:-translate-y-1"
+-              >
+-                <div className="rounded-[30px] border border-white/55 bg-[linear-gradient(135deg,rgba(255,255,255,0.78),rgba(255,255,255,0.42)),radial-gradient(circle_at_top_left,rgba(125,211,252,0.10),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.08),transparent_34%)] p-6 shadow-[0_22px_60px_rgba(15,23,42,0.08)] transition-all duration-300 group-hover:shadow-[0_30px_85px_rgba(15,23,42,0.14)] sm:p-8">
+-                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-3 py-1 text-xs uppercase tracking-[0.24em] text-slate-500 backdrop-blur-xl">
+-                    Featured today
+-                  </div>
+-                  <p className="mt-5 max-w-4xl whitespace-pre-wrap text-3xl font-semibold leading-[1.18] tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-5xl">
+-                    {(qotd.content || '').split('\n').slice(0, 4).join('\n')}
+-                  </p>
+-                  <div className="mt-7 flex items-center gap-4">
+-                    <Avatar className="h-14 w-14 border border-white/70 shadow-[0_12px_24px_rgba(15,23,42,0.08)]">
+-                      <AvatarImage src={qotd.user?.avatar || ''} alt={qotd.user?.name || 'Author'} />
+-                      <AvatarFallback>{(qotd.user?.name || 'A')[0]}</AvatarFallback>
+-                    </Avatar>
+-                    <div className="min-w-0">
+-                      <p className="text-base font-semibold text-slate-950">{qotd.user?.name || 'Unknown writer'}</p>
+-                      <p className="mt-1 text-sm text-slate-500">{qotd.genre || 'Featured poem'} for today</p>
+-                    </div>
+-                  </div>
+-                </div>
+-              </button>
+-            ) : (
+-              <div className="mt-6 rounded-[30px] border border-white/45 bg-white/30 p-6 backdrop-blur-xl sm:p-8">
+-                <p className="text-lg font-semibold text-slate-950">Today&apos;s spotlight is loading.</p>
+-                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">
+-                  In the meantime, explore the newest writing or publish your own piece to keep the homepage alive.
+-                </p>
+-              </div>
+-            )}
+-            </div>
+-          </FadeIn>
+-
+-          <FadeIn className={`${bentoCard} p-6`}>
+-            <div className={bentoGlow} />
+-            <div className="flex items-center justify-between gap-4">
+-              <div>
+-                <p className="section-kicker">Top picks</p>
+-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Shortlist for today</h2>
+-              </div>
+-              <Leaf className="h-5 w-5 text-amber-500" />
+-            </div>
+-
+-            <div className="mt-6 flex flex-col gap-3">
+-              {(topFive.length ? topFive : topPosts.slice(0, 5)).map((p, index) => (
+-                <motion.button
+-                  key={p.id}
+-                  whileHover={{ scale: 1.015, x: 6, y: -2 }}
+-                  transition={{ duration: 0.25 }}
+-                  onClick={() => onPostClick(p.id)}
+-                  className="flex items-start gap-4 rounded-[20px] border border-white/50 bg-white/25 p-4 text-left backdrop-blur-xl transition-all duration-300 hover:border-white/70 hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+-                >
+-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-slate-950 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(15,23,42,0.18)]">
+-                    {String(index + 1).padStart(2, '0')}
+-                  </div>
+-                  <div className="min-w-0">
+-                    <p className="line-clamp-2 text-base font-medium text-slate-950">{p.title || (p.content || '').split('\n')[0]}</p>
+-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{(p.content || '').split('\n').slice(0, 2).join(' ')}</p>
+-                    <p className="mt-3 text-xs uppercase tracking-[0.22em] text-slate-400">{p.user?.name || 'Unknown writer'}</p>
+-                  </div>
+-                </motion.button>
+-              ))}
+-
+-              {topFive.length === 0 && topPosts.length === 0 && (
+-                <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-500">
+-                  This shortlist will fill itself as soon as the feed has more poems to rank and recommend.
+-                </div>
+-              )}
+-            </div>
+-          </FadeIn>
+-        </div>
+-
+-        <FadeIn className={`${bentoCard} p-6 sm:p-8`}>
+-          <div className={bentoGlow} />
+-          <div className="flex flex-wrap items-center justify-between gap-4">
+-            <div>
+-              <p className="section-kicker">Featured writers</p>
+-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Voices worth following right now</h2>
+-            </div>
+-            <div className="flex gap-2">
+-              <Button
+-                variant="outline"
+-                size="icon"
+-                onClick={() => scrollPoets('left')}
+-                disabled={featuredPoetIndex === 0}
+-                className="rounded-[18px] border border-white/40 bg-white/25 text-slate-700 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/40 hover:shadow-[0_14px_30px_rgba(15,23,42,0.10)]"
+-              >
+-                <ChevronLeft className="h-4 w-4" />
+-              </Button>
+-              <Button
+-                variant="outline"
+-                size="icon"
+-                onClick={() => scrollPoets('right')}
+-                disabled={featuredPoetIndex >= Math.max(0, featuredPoets.length - 4)}
+-                className="rounded-[18px] border border-white/40 bg-white/25 text-slate-700 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/40 hover:shadow-[0_14px_30px_rgba(15,23,42,0.10)]"
+-              >
+-                <ChevronRight className="h-4 w-4" />
+-              </Button>
+-            </div>
+-          </div>
+-
+-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+-            {visiblePoets.length === 0 && (
+-              <div className="col-span-full rounded-[24px] border border-dashed border-white/40 bg-white/15 p-6 text-sm leading-7 text-slate-600 backdrop-blur-xl">
+-                Featured writers will appear here as soon as the community data loads in.
+-              </div>
+-            )}
+-
+-            {visiblePoets.map((poet) => {
+-              const isSelf = (localStorage.getItem('currentUserId') || '') === poet.id;
+-              const isFollowing = !!followed[poet.id];
+-
+-              return (
+-                <motion.div
+-                  key={poet.id}
+-                  whileHover={{ y: -6, scale: 1.01 }}
+-                  transition={{ duration: 0.25 }}
+-                  className="group rounded-[24px] border border-white/45 bg-white/20 p-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-300 hover:border-white/70 hover:shadow-[0_24px_60px_rgba(15,23,42,0.14)]"
+-                >
+-                  <button onClick={() => onUserClick(poet.id)} className="flex items-center gap-4 text-left">
+-                    <Avatar className="h-14 w-14 border border-slate-200">
+-                      <AvatarImage src={poet.avatar || ''} alt={poet.name} />
+-                      <AvatarFallback>{(poet.name || 'U')[0]}</AvatarFallback>
+-                    </Avatar>
+-                    <div className="min-w-0">
+-                      <p className="truncate text-base font-medium text-slate-950">{poet.name}</p>
+-                      <p className="truncate text-sm text-slate-500">{poet.username ? `@${poet.username}` : 'Featured writer'}</p>
+-                    </div>
+-                  </button>
+-
+-                  <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-500">
+-                    {poet.bio || 'Writes intimate, modern verses with a distinct point of view.'}
+-                  </p>
+-
+-                  {!isSelf && (
+-                    <Button
+-                      onClick={() => handleFollowToggle(poet.id)}
+-                      className={`mt-5 h-11 w-full rounded-[18px] border px-4 transition-all duration-300 ${
+-                        isFollowing
+-                          ? 'border-white/50 bg-white/30 text-slate-900 backdrop-blur-xl hover:bg-white/45'
+-                          : 'border-slate-950 bg-slate-950 text-white hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_18px_35px_rgba(15,23,42,0.22)]'
+-                      }`}
+-                    >
+-                      {isFollowing ? 'Following' : 'Follow'}
+-                    </Button>
+-                  )}
+-                </motion.div>
+-              );
+-            })}
+-          </div>
+-        </FadeIn>
+-
+-        {(events.length > 0 || spotlightPost) && (
+-          <div className="grid gap-8 xl:grid-cols-[1fr,1.618fr]">
+-            <FadeIn className={`${bentoCard} p-6 sm:p-8`}>
+-              <div className={bentoGlow} />
+-              <div className="flex flex-wrap items-center justify-between gap-4">
+-                <div>
+-                  <p className="section-kicker">Live calendar</p>
+-                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Upcoming community moments</h2>
+-                </div>
+-                <Button
+-                  variant="ghost"
+-                  onClick={goEvents}
+-                  className="rounded-[18px] border border-white/40 bg-white/20 px-4 text-slate-700 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/30 hover:text-slate-950 hover:shadow-[0_14px_30px_rgba(15,23,42,0.10)]"
+-                >
+-                  View events <ArrowRight className="ml-2 h-4 w-4" />
+-                </Button>
+-              </div>
+-
+-              <div className="mt-6 grid gap-4">
+-                {events.slice(0, 3).map((ev) => (
+-                  <div
+-                    key={ev.id}
+-                    className="rounded-[22px] border border-white/45 bg-white/20 p-5 shadow-[0_14px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(15,23,42,0.14)]"
+-                  >
+-                    <div className="flex items-start gap-4">
+-                      <div className="rounded-[18px] bg-slate-950 px-4 py-3 text-center text-white shadow-[0_12px_24px_rgba(15,23,42,0.18)]">
+-                        <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+-                          {new Date(ev.startsAt).toLocaleString(undefined, { month: 'short' })}
+-                        </div>
+-                        <div className="mt-1 text-2xl font-semibold">{new Date(ev.startsAt).getDate()}</div>
+-                      </div>
+-                      <div className="min-w-0">
+-                        <div className="text-lg font-medium text-slate-950">{ev.title}</div>
+-                        {ev.subtitle && <div className="mt-1 line-clamp-2 text-sm text-slate-500">{ev.subtitle}</div>}
+-                        <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+-                          <Calendar className="h-4 w-4 text-sky-600" />
+-                          {new Date(ev.startsAt).toLocaleString()}
+-                        </div>
+-                      </div>
+-                    </div>
+-                  </div>
+-                ))}
+-
+-                {events.length === 0 && (
+-                  <div className="rounded-[22px] border border-dashed border-white/40 bg-white/15 p-5 text-sm leading-7 text-slate-600 backdrop-blur-xl">
+-                    No events are listed yet. Check back soon for readings, launches, and community sessions.
+-                  </div>
+-                )}
+-              </div>
+-            </FadeIn>
+-
+-            {spotlightPost && (
+-              <FadeIn className={`${bentoCard} p-6 sm:p-8`}>
+-                <div className={bentoGlow} />
+-                <div className="flex items-start justify-between gap-4">
+-                  <div>
+-                    <p className="section-kicker">Editor&apos;s pick</p>
+-                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">One more piece to open next</h2>
+-                  </div>
+-                  <BookOpenText className="h-5 w-5 text-slate-400" />
+-                </div>
+-
+-                <button
+-                  onClick={() => onPostClick(spotlightPost.id)}
+-                  className="group mt-6 block w-full rounded-[24px] border border-white/45 bg-[linear-gradient(140deg,rgba(255,255,255,0.42),rgba(255,255,255,0.18)),radial-gradient(circle_at_top_left,rgba(125,211,252,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.10),transparent_34%)] p-6 text-left shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-[0_26px_70px_rgba(15,23,42,0.14)]"
+-                >
+-                  <p className="text-sm uppercase tracking-[0.26em] text-slate-500">{spotlightPost.genre || 'Poetry'}</p>
+-                  <h3 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+-                    {spotlightPost.title || 'Untitled piece'}
+-                  </h3>
+-                  <p className="mt-4 whitespace-pre-wrap text-base leading-8 text-slate-600">
+-                    {(spotlightPost.content || '').split('\n').slice(0, 4).join('\n')}
+-                  </p>
+-                  <div className="mt-6 flex items-center gap-3">
+-                    <Avatar className="h-11 w-11 border border-slate-200">
+-                      <AvatarImage src={spotlightPost.user?.avatar || ''} alt={spotlightPost.user?.name || 'Writer'} />
+-                      <AvatarFallback>{(spotlightPost.user?.name || 'W')[0]}</AvatarFallback>
+-                    </Avatar>
+-                    <div>
+-                      <p className="text-sm font-medium text-slate-950">{spotlightPost.user?.name || 'Unknown writer'}</p>
+-                      <p className="text-sm text-slate-500">Open the full poem</p>
+-                    </div>
+-                  </div>
+-                </button>
+-              </FadeIn>
+-            )}
+-          </div>
+-        )}
+-
+-        <TopPoemsCarousel onPostClick={onPostClick} />
+-
+-        <div className="grid gap-8 xl:grid-cols-[1.618fr,1fr]">
+-          <FadeIn className="min-w-0">
+-            <div className="mb-6 flex items-end justify-between gap-4">
+-              <div>
+-                <p className="section-kicker">Latest feed</p>
+-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Fresh writing from the community</h2>
+-              </div>
+-              <Button
+-                variant="ghost"
+-                onClick={goExplore}
+-                className="rounded-[18px] border border-white/40 bg-white/20 px-4 text-slate-700 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/30 hover:text-slate-950 hover:shadow-[0_14px_30px_rgba(15,23,42,0.10)]"
+-              >
+-                Explore feed
+-              </Button>
+-            </div>
+-
+-            <div className="flex flex-col gap-6">
+-              {feedPreview.length > 0 ? (
+-                feedPreview.map((post) => <PostCard key={post.id} post={post} onPostClick={onPostClick} onUserClick={onUserClick} />)
+-              ) : (
+-                <div className={`${bentoCard} p-6`}>
+-                  <div className={bentoGlow} />
+-                  <p className="text-lg font-medium text-slate-950">The feed is quiet right now.</p>
+-                  <p className="mt-3 text-sm leading-7 text-slate-500">
+-                    Try exploring trending poems, checking back in a moment, or publishing something to get the conversation moving.
+-                  </p>
+-                </div>
+-              )}
+-            </div>
+-          </FadeIn>
+-
+-          <FadeInStagger className="flex flex-col gap-6">
+-            <FadeIn className={`${bentoCard} p-6`}>
+-              <div className={bentoGlow} />
+-              <p className="section-kicker">Why this page works</p>
+-              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Built for reading, discovering, and returning</h3>
+-              <div className="mt-5 grid gap-3">
+-                {[
+-                  'Search is front and center, with one-click mood and language shortcuts.',
+-                  'Featured pieces and writers appear before the long feed, so the page feels curated.',
+-                  'Every card now matches the light visual system used across the rest of the app.',
+-                ].map((item) => (
+-                  <div key={item} className="rounded-[18px] border border-white/45 bg-white/20 px-4 py-4 text-sm leading-7 text-slate-600 backdrop-blur-xl">
+-                    {item}
+-                  </div>
+-                ))}
+-              </div>
+-            </FadeIn>
+-
+-            <FadeIn className={`${bentoCard} p-6`}>
+-              <div className={bentoGlow} />
+-              <p className="section-kicker">Keep going</p>
+-              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">What would you like to do next?</h3>
+-              <div className="mt-5 grid gap-3">
+-                <button
+-                  onClick={goWrite}
+-                  className="group flex items-center justify-between rounded-[18px] border border-white/45 bg-white/20 px-4 py-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/70 hover:bg-white/30 hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+-                >
+-                  <div>
+-                    <p className="text-sm font-medium text-slate-950">Write a new poem</p>
+-                    <p className="mt-1 text-sm text-slate-500">Open the editor and publish when ready.</p>
+-                  </div>
+-                  <PenLine className="h-5 w-5 text-slate-400" />
+-                </button>
+-                <button
+-                  onClick={goExplore}
+-                  className="group flex items-center justify-between rounded-[18px] border border-white/45 bg-white/20 px-4 py-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/70 hover:bg-white/30 hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+-                >
+-                  <div>
+-                    <p className="text-sm font-medium text-slate-950">Explore more poetry</p>
+-                    <p className="mt-1 text-sm text-slate-500">Move into the wider feed and discover new voices.</p>
+-                  </div>
+-                  <Compass className="h-5 w-5 text-slate-400" />
+-                </button>
+-                <button
+-                  onClick={goEvents}
+-                  className="group flex items-center justify-between rounded-[18px] border border-white/45 bg-white/20 px-4 py-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/70 hover:bg-white/30 hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+-                >
+-                  <div>
+-                    <p className="text-sm font-medium text-slate-950">Check upcoming events</p>
+-                    <p className="mt-1 text-sm text-slate-500">See readings, launches, and community sessions.</p>
+-                  </div>
+-                  <Calendar className="h-5 w-5 text-slate-400" />
+-                </button>
+-              </div>
+-            </FadeIn>
+-          </FadeInStagger>
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}

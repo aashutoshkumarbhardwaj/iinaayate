@@ -245,6 +245,23 @@ app.use((req, _res, next) => {
 });
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing server gracefully...');
+  server.close(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, closing server gracefully...');
+  server.close(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
 });

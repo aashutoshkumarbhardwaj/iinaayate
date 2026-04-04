@@ -1,9 +1,15 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
+const multer_1 = __importDefault(require("multer"));
+const cloudinary_1 = require("../lib/cloudinary");
 const router = (0, express_1.Router)();
+const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 // List users with pagination and filters
 router.get('/', async (req, res) => {
     const { limit = '24', offset = '0', startsWith, sort = 'popularity' } = req.query;
@@ -41,6 +47,34 @@ router.get('/', async (req, res) => {
         postsCount: u._count.posts,
     }));
     res.json({ users, total });
+});
+// Upload avatar image and update user.avatar
+router.post('/:id/avatar', auth_1.requireAuth, upload.single('file'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id)
+            return res.status(400).json({ error: 'Missing id' });
+        if (req.userId !== id)
+            return res.status(403).json({ error: 'Forbidden' });
+        if (!req.file)
+            return res.status(400).json({ error: 'No file uploaded' });
+        if (!cloudinary_1.cloudinaryConfigured)
+            return res.status(501).json({ error: 'Image upload not configured' });
+        const buffer = req.file.buffer;
+        const url = await new Promise((resolve, reject) => {
+            const stream = cloudinary_1.cloudinary.uploader.upload_stream({ folder: 'iinaayate/avatars', resource_type: 'image', transformation: [{ width: 256, height: 256, crop: 'fill', gravity: 'auto' }] }, (err, result) => {
+                if (err || !result?.secure_url)
+                    return reject(err || new Error('Upload failed'));
+                resolve(result.secure_url);
+            });
+            stream.end(buffer);
+        });
+        await prisma_1.prisma.user.update({ where: { id }, data: { avatar: url } });
+        return res.json({ url });
+    }
+    catch (e) {
+        return res.status(500).json({ error: 'Avatar upload failed' });
+    }
 });
 router.get('/top', async (_req, res) => {
     const limit = 8;

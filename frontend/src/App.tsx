@@ -20,6 +20,7 @@ import { BlogDetailsPage } from './components/BlogDetailsPage';
 import { setAuthToken, authAPI } from './utils/api';
 import { HelpPage } from './components/HelpPage';
 import { StorePage } from './components/StorePage';
+import { Footer } from './components/Footer';
 
 type Page = 'auth' | 'home' | 'explore' | 'write' | 'profile' | 'post' | 'search' | 'notifications' | 'settings' | 'collections' | 'daily' | 'events' | 'event' | 'writers' | 'blog' | 'blogpost' | 'help' | 'store';
 
@@ -29,6 +30,7 @@ interface NavigationState {
   userId?: string;
   eventId?: string;
   blogPostId?: string;
+  searchQuery?: string;
 }
 
 export default function App() {
@@ -75,7 +77,7 @@ export default function App() {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('avatar-changed'));
   };
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, options?: { searchQuery?: string }) => {
     if (page === 'profile') {
       const id = localStorage.getItem('currentUserId');
       if (id) {
@@ -83,7 +85,7 @@ export default function App() {
         return;
       }
     }
-    setNavState({ page: page as Page });
+    setNavState({ page: page as Page, ...(options?.searchQuery ? { searchQuery: options.searchQuery } : {}) });
   };
 
   const handlePostClick = (postId: string) => {
@@ -115,7 +117,7 @@ export default function App() {
   }, [isAuthenticated, navState.page, navState.userId]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-app pb-24 text-slate-950 md:pb-0">
       <Toaster position="top-center" />
       <Navigation currentPage={navState.page} onNavigate={handleNavigate} onLogout={handleLogout} isAuthenticated={isAuthenticated} />
       {mustAuth && <AuthPage onAuth={handleAuth} />}
@@ -171,6 +173,7 @@ export default function App() {
 
       {!mustAuth && navState.page === 'search' && (
         <SearchPage
+          initialQuery={navState.searchQuery}
           onBack={handleBack}
           onPostClick={handlePostClick}
           onUserClick={handleUserClick}
@@ -229,6 +232,8 @@ export default function App() {
           onPostClick={(id) => setNavState({ page: 'blogpost', blogPostId: id })}
         />
       )}
+
+      {!mustAuth && <Footer currentPage={navState.page} onNavigate={handleNavigate} />}
     </div>
   );
 }

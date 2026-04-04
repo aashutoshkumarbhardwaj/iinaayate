@@ -28,7 +28,6 @@ app.use((0, cors_1.default)({
             'http://127.0.0.1:3000',
             'http://127.0.0.1:5173',
             'http://127.0.0.1:3001',
-            'https://iinaayate.netlify.app',
             FRONTEND_ORIGIN,
         ].filter(Boolean);
         if (!origin)
@@ -227,13 +226,37 @@ app.use('/collections', collections_1.default);
 console.log('Mounted /collections');
 app.use('/transliterate', transliterate_1.default);
 console.log('Mounted /transliterate');
+// Root status endpoint for primary URL
+app.get('/', (_req, res) => {
+    res.status(200).json({
+        ok: true,
+        name: 'iinaayate-api',
+        version: '1.0.0',
+        docs: '/health',
+    });
+});
 // Simple request logger to debug 404s
 app.use((req, _res, next) => {
     console.log(`[${new Date().toISOString()}] 404 ${req.method} ${req.path}`);
     next();
 });
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`API running on http://localhost:${port}`);
+});
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, closing server gracefully...');
+    server.close(async () => {
+        await prisma_1.prisma.$disconnect();
+        process.exit(0);
+    });
+});
+process.on('SIGINT', async () => {
+    console.log('SIGINT received, closing server gracefully...');
+    server.close(async () => {
+        await prisma_1.prisma.$disconnect();
+        process.exit(0);
+    });
 });
 //# sourceMappingURL=index.js.map

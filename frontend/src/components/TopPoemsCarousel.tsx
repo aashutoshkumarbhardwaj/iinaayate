@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Heart, Bookmark, Share2, Download } from 'lucide-react';
-import { Button } from './ui/button';
-import { postAPI } from '../utils/api';
+import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { Button } from './ui/button';
+import { FadeIn } from './ui/motion';
+import { postAPI } from '../utils/api';
 
 interface TopPoemsCarouselProps {
   onPostClick: (postId: string) => void;
@@ -19,11 +21,13 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
       try {
         const data = await postAPI.getTopPosts();
         if (mounted) setTopPoems(data);
-      } catch (e) {
-        // ignore
+      } catch {
+        // Keep the carousel resilient even if the endpoint fails.
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const currentPoem = topPoems[currentIndex];
@@ -37,10 +41,8 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
     setCurrentIndex((prev) => (topPoems.length ? (prev - 1 + topPoems.length) % topPoems.length : 0));
   };
 
-  // Autoplay with pause on hover
   useEffect(() => {
-    if (!topPoems.length) return;
-    if (isHovered) return;
+    if (!topPoems.length || isHovered) return;
     const id = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % topPoems.length);
     }, 5000);
@@ -48,122 +50,104 @@ export function TopPoemsCarousel({ onPostClick }: TopPoemsCarouselProps) {
   }, [topPoems.length, isHovered]);
 
   const handleDownload = () => {
-    toast.success('Poem image downloaded! 🎨');
+    toast.success('Poem image downloaded!');
   };
 
   if (!currentPoem || !author) return null;
 
-  // Different gradient themes for each slide
   const gradients = [
-    'from-purple-600 to-purple-800',
-    'from-rose-600 to-pink-700',
-    'from-blue-600 to-indigo-700',
-    'from-green-600 to-emerald-700',
-    'from-orange-600 to-red-700',
+    'from-slate-50 via-white to-sky-50',
+    'from-blue-50 via-white to-slate-50',
+    'from-slate-50 via-white to-indigo-50',
+    'from-zinc-50 via-white to-slate-100',
+    'from-sky-50 via-white to-slate-50',
   ];
 
   return (
-    <div className="mb-12" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl text-gray-900">Today's top 5</h2>
+    <FadeIn className="mb-12" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <p className="section-kicker">Momentum</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Trending now</h2>
+        </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={prevSlide}
-            className="rounded-full"
-          >
-            <ChevronLeft className="w-4 h-4" />
+          <Button variant="outline" size="icon" onClick={prevSlide} className="glass-panel rounded-[20px] border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={nextSlide}
-            className="rounded-full"
-          >
-            <ChevronRight className="w-4 h-4" />
+          <Button variant="outline" size="icon" onClick={nextSlide} className="glass-panel rounded-[20px] border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Carousel Card */}
-      <div
-        className={`relative bg-gradient-to-br ${gradients[currentIndex]} rounded-2xl overflow-hidden cursor-pointer group`}
-        onClick={() => onPostClick(currentPoem.id)}
-      >
-        {/* Decorative Floral Pattern */}
-        <div className="absolute right-8 bottom-8 opacity-30">
-          <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
-            <path
-              d="M60 20C60 20 75 35 75 50C75 65 65 75 60 75C55 75 45 65 45 50C45 35 60 20 60 20Z"
-              fill="white"
-            />
-            <path
-              d="M60 100C60 100 45 85 45 70C45 55 55 45 60 45C65 45 75 55 75 70C75 85 60 100 60 100Z"
-              fill="white"
-            />
-            <path
-              d="M20 60C20 60 35 45 50 45C65 45 75 55 75 60C75 65 65 75 50 75C35 75 20 60 20 60Z"
-              fill="white"
-            />
-            <path
-              d="M100 60C100 60 85 75 70 75C55 75 45 65 45 60C45 55 55 45 70 45C85 45 100 60 100 60Z"
-              fill="white"
-            />
-          </svg>
-        </div>
+      <div className="glass-card relative overflow-hidden rounded-[20px]">
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradients[currentIndex]}`} />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.9),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.08),transparent_30%)]" />
 
-        {/* Content */}
-        <div className="relative p-12">
-          {/* Poem Text - Urdu/Hindi style */}
-          <div className="text-center mb-8">
-            <p className="text-3xl text-white leading-relaxed mb-2 max-w-3xl mx-auto" style={{ fontFamily: 'serif' }}>
-              {(currentPoem.content || '').split('\n').slice(0, 2).join('\n')}
-            </p>
-            <p className="text-white/80 text-lg mt-4">{author?.name}</p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button className="flex items-center gap-2 text-white hover:scale-110 transition-transform">
-                <Heart className="w-5 h-5 fill-white" />
-                <span>{currentPoem.likesCount ?? currentPoem?._count?.likes ?? 0}</span>
-              </button>
-              <button className="text-white hover:scale-110 transition-transform">
-                <Bookmark className="w-5 h-5" />
-              </button>
-              <button className="text-white hover:scale-110 transition-transform">
-                <Share2 className="w-5 h-5" />
-              </button>
+        <AnimatePresence mode="wait">
+          <motion.button
+            key={currentPoem.id}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -14 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="relative flex w-full flex-col gap-8 p-6 text-left sm:p-8 lg:flex-row lg:items-end lg:justify-between lg:p-10"
+            onClick={() => onPostClick(currentPoem.id)}
+          >
+            <div className="flex max-w-3xl flex-col gap-6">
+              <div className="glass-panel inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em] text-slate-600">
+                Featured today
+              </div>
+              <div>
+                <h3 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{currentPoem.title}</h3>
+                <p className="mt-5 max-w-2xl whitespace-pre-wrap text-lg leading-8 text-slate-600">
+                  {(currentPoem.content || '').split('\n').slice(0, 3).join('\n')}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                <span className="rounded-full border border-slate-200 bg-white px-4 py-2">{author?.name}</span>
+                <span className="rounded-full border border-slate-200 bg-white px-4 py-2">{currentPoem.genre || 'Poetry'}</span>
+              </div>
             </div>
 
-            <Button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.stopPropagation();
-                handleDownload();
-              }}
-              className="bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download Image
-            </Button>
-          </div>
-        </div>
+            <div className="flex flex-col gap-4 lg:min-w-[280px] lg:items-end">
+              <div className="glass-panel flex flex-wrap items-center gap-4 rounded-[20px] px-5 py-4 text-slate-600">
+                <button className="flex items-center gap-2 transition-transform duration-300 hover:scale-105">
+                  <Heart className="h-5 w-5 fill-sky-600 text-sky-600" />
+                  <span>{currentPoem.likesCount ?? currentPoem?._count?.likes ?? 0}</span>
+                </button>
+                <button className="transition-transform duration-300 hover:scale-105">
+                  <Bookmark className="h-5 w-5" />
+                </button>
+                <button className="transition-transform duration-300 hover:scale-105">
+                  <Share2 className="h-5 w-5" />
+                </button>
+              </div>
+
+              <Button
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  handleDownload();
+                }}
+                className="h-11 rounded-[20px] border border-slate-950 bg-slate-950 px-5 text-white transition-all duration-300 hover:bg-slate-800"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Image
+              </Button>
+            </div>
+          </motion.button>
+        </AnimatePresence>
       </div>
 
-      {/* Dots Indicator */}
-      <div className="flex items-center justify-center gap-2 mt-4">
+      <div className="mt-4 flex items-center justify-center gap-2">
         {topPoems.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrentIndex(index)}
-            className={`w-2 h-2 rounded-full transition-all ${
-              index === currentIndex ? 'bg-purple-600 w-6' : 'bg-gray-300'
-            }`}
+            className={`h-2 rounded-full transition-all ${index === currentIndex ? 'w-8 bg-slate-950' : 'w-2 bg-slate-300'}`}
           />
         ))}
       </div>
-    </div>
+    </FadeIn>
   );
 }

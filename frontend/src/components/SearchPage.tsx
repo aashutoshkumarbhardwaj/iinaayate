@@ -126,7 +126,7 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
                       onClick={() => onPostClick(p.id)}
                       className="block w-full text-center group"
                     >
-                      <div className="text-2xl text-gray-900 leading-relaxed whitespace-pre-wrap group-hover:text-rose-600 transition-colors" style={{ fontFamily: 'serif' }}>
+                      <div className="font-poetry text-2xl text-gray-900 whitespace-pre-wrap group-hover:text-rose-600 transition-colors" style={{ lineHeight: 1.85 }}>
                         {(p.content || '').split('\n').slice(0, 2).join('\n')}
                       </div>
                       <div className="mt-3 text-gray-500 text-sm tracking-wide">{p.user?.name}</div>

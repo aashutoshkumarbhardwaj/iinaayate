@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { commentAPI, postAPI, userAPI, transliterateAPI } from '../utils/api';
 import { Helmet } from 'react-helmet-async';
+import { simplifyText, hasSimplifiableText } from '../utils/textNormalization';
 
 interface PostDetailsPageProps {
   postId: string;
@@ -25,6 +26,7 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
   const [isFollowing, setIsFollowing] = useState(false);
   const [related, setRelated] = useState<any[]>([]);
   const [lang, setLang] = useState<'Urdu' | 'Hindi' | 'Hinglish'>('Urdu');
+  const [displayMode, setDisplayMode] = useState<'original' | 'simplified'>('original');
   const [translits, setTranslits] = useState<{ Hindi?: string; Hinglish?: string }>({});
   const [translitLoading, setTranslitLoading] = useState(false);
 
@@ -33,11 +35,14 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
   // Compute displayed text with backend transliteration + cache
   const displayed = useMemo(() => {
     const base = post?.content || '';
-    if (lang === 'Urdu') return base;
-    if (lang === 'Hindi') return translits.Hindi ?? (translitLoading ? 'Transliterating…' : base);
-    if (lang === 'Hinglish') return translits.Hinglish ?? (translitLoading ? 'Transliterating…' : base);
-    return base;
-  }, [post?.content, lang, translits.Hindi, translits.Hinglish, translitLoading]);
+    const text = lang === 'Urdu'
+      ? base
+      : lang === 'Hindi'
+        ? translits.Hindi ?? (translitLoading ? 'Transliterating…' : base)
+        : translits.Hinglish ?? (translitLoading ? 'Transliterating…' : base);
+    if (displayMode === 'simplified') return simplifyText(text);
+    return text;
+  }, [post?.content, lang, translits.Hindi, translits.Hinglish, translitLoading, displayMode]);
 
   useEffect(() => {
     let mounted = true;
@@ -174,7 +179,7 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
         </Button>
 
         {/* Title + date */}
-        <h1 className="text-5xl font-serif text-gray-900 text-center mb-2">{post.title}</h1>
+        <h1 className="font-poetry text-5xl text-gray-900 text-center mb-2" style={{ lineHeight: 1.15 }}>{post.title}</h1>
         <p className="text-center text-gray-500 mb-5">Published on {post.createdAt ? new Date(post.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</p>
 
         {/* Language chips */}
@@ -190,9 +195,44 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
           ))}
         </div>
 
+        {/* Original / Simplified toggle */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="text-sm text-gray-500">Show original / Simplified</span>
+          <button
+            onClick={() => setDisplayMode('original')}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              displayMode === 'original'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+            }`}
+            aria-pressed={displayMode === 'original'}
+          >
+            Original
+          </button>
+          <button
+            onClick={() => setDisplayMode('simplified')}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              displayMode === 'simplified'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+            }`}
+            aria-pressed={displayMode === 'simplified'}
+          >
+            Simplified
+          </button>
+        </div>
+        <p className="mb-6 text-center text-xs text-gray-400">
+          {hasSimplifiableText(post?.content || '')
+            ? 'Simplified view removes Latin diacritics such as ā, ī, ū, and ñ.'
+            : 'Original and simplified are the same for this script.'}
+        </p>
+
         {/* Poem content */}
         <div className="bg-white rounded-2xl border border-gray-200 p-10 shadow-sm mb-6">
-          <div className="text-xl text-gray-800 leading-relaxed whitespace-pre-wrap text-center" style={{ fontFamily: 'serif' }}>
+          <div
+            className="font-poetry text-xl text-gray-800 whitespace-pre-wrap text-center"
+            style={{ lineHeight: 1.85 }}
+          >
             {displayed}
           </div>
         </div>

@@ -122,8 +122,8 @@ function PoetryCard({
 
         <button onClick={() => onPostClick(post.id)} className="mt-5 block text-left">
           <blockquote
-            className={`whitespace-pre-line italic leading-[1.45] text-[#6c7a8a] ${compact ? 'text-[1.05rem]' : 'text-[1.15rem] md:text-[1.25rem]'}`}
-            style={{ fontFamily: '"Noto Serif Devanagari", "Playfair Display", ui-serif, Georgia, serif' }}
+            className={`font-poetry whitespace-pre-line italic text-[#6c7a8a] ${compact ? 'text-[1.05rem]' : 'text-[1.15rem] md:text-[1.25rem]'}`}
+            style={{ lineHeight: 1.8 }}
           >
             &ldquo;{poetryText(post, compact ? 2 : 3)}&rdquo;
           </blockquote>
@@ -193,10 +193,12 @@ function FittedPoemText({
   text,
   minFontSize,
   maxFontSize,
+  nudgeLeftPx = 0,
 }: {
   text: string;
   minFontSize: number;
   maxFontSize: number;
+  nudgeLeftPx?: number;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const quoteRef = useRef<HTMLQuoteElement | null>(null);
@@ -280,6 +282,7 @@ function FittedPoemText({
           lineHeight: 1.14,
           letterSpacing: '-0.03em',
           maxWidth: '100%',
+          transform: nudgeLeftPx ? `translateX(${nudgeLeftPx}px)` : undefined,
           opacity: isReady ? 1 : 0,
           visibility: isReady ? 'visible' : 'hidden',
           transition: 'opacity 120ms ease-out',
@@ -566,6 +569,11 @@ function PoetryHeroSwipeCard({
 }) {
   const author = poetryOfDay?.user?.name || 'अज्ञात';
   const showReadMore = poetryOfDayLength > 110;
+  const posterTitle = poetryOfDay?.title || 'कविता का दिन';
+  const heroText =
+    poetryOfDayText ||
+    'हज़ारों ख़्वाहिशें ऐसी कि हर ख़्वाहिश पे दम निकले,\nबहुत निकले मेरे अरमां लेकिन फिर भी कम निकले।';
+  const heroFallback = excerpt(poetryOfDay?.content || heroText, 3);
 
   const endDrag = (_: any, info: { offset: { x: number } }) => {
     if (info.offset.x < -80) setHeroSlide(1);
@@ -573,9 +581,9 @@ function PoetryHeroSwipeCard({
   };
 
   return (
-    <article className="relative mx-auto w-full max-w-[560px] overflow-hidden rounded-[26px] border border-[#f1e7d9] bg-[#fffaf2] shadow-[0_14px_36px_rgba(79,54,24,0.06)] sm:max-w-[680px] lg:max-w-[740px]">
+    <article className="relative mx-auto w-full max-w-[560px] overflow-hidden rounded-[28px] border border-[#f1e7d9] bg-[#fffaf2] shadow-[0_18px_46px_rgba(79,54,24,0.08)] sm:max-w-[680px] lg:max-w-[760px]">
       <motion.div
-        className="flex w-[200%]"
+        className="flex h-full w-[200%]"
         animate={{ x: heroSlide === 0 ? '0%' : '-50%' }}
         transition={{ type: 'spring', stiffness: 160, damping: 24 }}
         drag="x"
@@ -583,28 +591,45 @@ function PoetryHeroSwipeCard({
         dragElastic={0.08}
         onDragEnd={endDrag}
       >
-        <div className="relative w-1/2 px-5 py-6 sm:px-12 sm:py-10">
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.55),rgba(248,240,229,0.36))]" />
-          <div className="absolute left-0 top-0 h-28 w-28 rounded-br-full bg-[#f6eadb]/40 blur-2xl" />
-          <div className="absolute right-5 top-10 select-none font-serif text-[7rem] font-semibold leading-none tracking-[-0.18em] text-[#d6d0c8]/60">
-            99
-          </div>
+        <div className="relative w-1/2 overflow-hidden px-5 py-6 sm:px-12 sm:py-10">
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(254,249,243,0.96),rgba(247,239,229,0.92))]" />
           <div
-            className="absolute bottom-0 right-0 h-14 w-14 bg-[#a36116]"
+            className="absolute left-[-6%] top-[3%] select-none font-serif text-[8rem] font-semibold leading-none tracking-[-0.2em] text-[#e6ddd3]/90 sm:text-[11rem]"
+            style={{ transform: 'translateX(4px) translateY(0)' }}
+          >
+            अ
+          </div>
+          <div className="absolute left-5 top-7 h-24 w-24 rounded-full bg-[#f3e4d2]/60 blur-2xl" />
+          <div
+            className="absolute bottom-0 right-0 h-20 w-20 bg-[#efe5d8]/80"
             style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }}
             aria-hidden="true"
           />
 
-          <div className="relative flex min-h-[290px] flex-col items-center justify-between text-center sm:min-h-[380px] lg:min-h-[400px]">
-            <p className="pt-1 text-[10px] uppercase tracking-[0.48em] text-[#b98a5c]">
-              Kavita Ka Din
-            </p>
+          <div className="relative flex min-h-[290px] flex-col items-center justify-between text-center sm:min-h-[380px] lg:min-h-[420px]">
+            <div className="flex flex-col items-center gap-3 pt-1">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#eedec7] bg-[#f8efe2] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8e4e14] shadow-[0_8px_18px_rgba(79,54,24,0.04)]">
+                <span className="h-2 w-2 rounded-full bg-[#a36116]" />
+                {posterTitle}
+              </span>
+              {showReadMore && (
+                <button
+                  type="button"
+                  onClick={() => poetryOfDay && onPostClick(poetryOfDay.id)}
+                  className="rounded-full border border-[#0b1d35]/10 bg-white/60 px-3 py-1 text-[9px] uppercase tracking-[0.22em] text-[#0b1d35]/60 backdrop-blur-sm transition-colors hover:bg-white/90 hover:text-[#0b1d35]"
+                >
+                  Tap to open
+                </button>
+              )}
+            </div>
+
             <button onClick={() => poetryOfDay && onPostClick(poetryOfDay.id)} className="group w-full px-1 py-2 sm:py-4">
-              <div className="mx-auto flex min-h-[10.5rem] w-full max-w-[20rem] items-center justify-center overflow-hidden px-1 sm:min-h-[15rem] sm:max-w-[24rem] lg:min-h-[16rem] lg:max-w-[28rem]">
+              <div className="mx-auto flex min-h-[11rem] w-full max-w-[20rem] items-center justify-center overflow-hidden px-1 sm:min-h-[15rem] sm:max-w-[24rem] lg:min-h-[16rem] lg:max-w-[28rem]">
                 <FittedPoemText
-                  text={poetryOfDayText}
+                  text={heroText}
                   minFontSize={24}
                   maxFontSize={84}
+                  nudgeLeftPx={-2}
                 />
               </div>
             </button>
@@ -612,38 +637,28 @@ function PoetryHeroSwipeCard({
             <div className="flex w-full items-center justify-center gap-4 pb-0.5 sm:pb-1">
               <span className="h-px w-10 bg-[#d7d0c7]" />
               <cite
-                className="not-italic text-[1.15rem] leading-none text-[#7f8a99] sm:text-[1.7rem]"
-                style={{ fontFamily: '"Noto Serif Devanagari", "Playfair Display", ui-serif, Georgia, serif' }}
+                className="not-italic text-[1.02rem] leading-none text-[#7f8a99] sm:text-[1.45rem]"
+                style={{ fontFamily: 'var(--font-serif)' }}
               >
                 {author}
               </cite>
               <span className="h-px w-10 bg-[#d7d0c7]" />
             </div>
 
-            {showReadMore && (
-              <button
-                type="button"
-                onClick={() => poetryOfDay && onPostClick(poetryOfDay.id)}
-                className="mt-1 rounded-full border border-[#0b1d35]/10 bg-white/50 px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-[#0b1d35]/70 backdrop-blur-sm transition-all hover:bg-white/80 hover:text-[#0b1d35] sm:px-4 sm:py-2 sm:text-[11px] sm:tracking-[0.28em]"
-              >
-                Read more
-              </button>
-            )}
-            </div>
-
             <button
               type="button"
               onClick={() => setHeroSlide(1)}
               aria-label="Tap to see the alternate poetry style"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-[#e6d8c8]/70 bg-white/35 px-2.5 py-6 text-[10px] uppercase tracking-[0.25em] text-[#8e4e14] opacity-35 backdrop-blur-sm transition-all hover:opacity-70"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-[#e6d8c8]/70 bg-white/45 px-2.5 py-6 text-[10px] uppercase tracking-[0.25em] text-[#8e4e14] opacity-40 backdrop-blur-sm transition-all hover:opacity-80"
             >
               tap
               <span className="mt-1 block text-[0.95rem] leading-none">→</span>
             </button>
           </div>
+        </div>
 
-        <div className="relative w-1/2 px-5 py-6 sm:px-12 sm:py-10">
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.62),rgba(244,236,225,0.45))]" />
+        <div className="relative w-1/2 overflow-hidden px-5 py-6 sm:px-12 sm:py-10">
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(244,236,225,0.5))]" />
           <div className="absolute left-8 top-8 h-1 w-24 bg-[#b57a34]" />
           <div className="absolute right-6 top-8 text-right">
             <p className="text-[10px] uppercase tracking-[0.42em] text-[#b57a34]">KAVITA KA DIN</p>
@@ -654,21 +669,25 @@ function PoetryHeroSwipeCard({
             aria-hidden="true"
           />
           <div className="absolute bottom-0 right-[22%] h-40 w-24 rounded-t-full bg-[#d9d6cf]/60" />
-          <div className="absolute bottom-4 right-8 h-32 w-24 bg-[#e5e1da]/90" style={{ clipPath: 'polygon(0 16%, 100% 0, 100% 100%, 0 84%)' }} />
+          <div
+            className="absolute bottom-4 right-8 h-32 w-24 bg-[#e5e1da]/90"
+            style={{ clipPath: 'polygon(0 16%, 100% 0, 100% 100%, 0 84%)' }}
+          />
 
-          <div className="relative flex min-h-[290px] flex-col justify-between text-center sm:min-h-[380px] lg:min-h-[400px]">
+          <div className="relative flex min-h-[290px] flex-col justify-between text-center sm:min-h-[380px] lg:min-h-[420px]">
             <div className="mt-6 max-w-[21rem] sm:mt-10 sm:max-w-[24rem] lg:max-w-[28rem]">
               <button onClick={() => poetryOfDay && onPostClick(poetryOfDay.id)} className="block w-full">
                 <div className="flex min-h-[11rem] items-center justify-center overflow-hidden sm:min-h-[16rem] lg:min-h-[17rem]">
                   <FittedPoemText
-                    text={poetryOfDayText}
+                    text={heroText}
                     minFontSize={22}
                     maxFontSize={82}
+                    nudgeLeftPx={-2}
                   />
                 </div>
               </button>
               <p className="mt-3 max-w-[16rem] line-clamp-3 text-[0.9rem] leading-6 text-[#46505d] sm:mt-5 sm:text-[1.1rem] sm:leading-7">
-                {excerpt(poetryOfDay?.content || '', 3)}
+                {heroFallback}
               </p>
             </div>
 
@@ -684,7 +703,7 @@ function PoetryHeroSwipeCard({
               type="button"
               onClick={() => setHeroSlide(0)}
               aria-label="Tap to return to the poster style"
-              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-[#e6d8c8]/70 bg-white/35 px-2.5 py-6 text-[10px] uppercase tracking-[0.25em] text-[#8e4e14] opacity-35 backdrop-blur-sm transition-all hover:opacity-70"
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-[#e6d8c8]/70 bg-white/45 px-2.5 py-6 text-[10px] uppercase tracking-[0.25em] text-[#8e4e14] opacity-40 backdrop-blur-sm transition-all hover:opacity-80"
             >
               tap
               <span className="mt-1 block text-[0.95rem] leading-none">←</span>

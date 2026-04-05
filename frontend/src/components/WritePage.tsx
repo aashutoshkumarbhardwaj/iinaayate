@@ -120,7 +120,8 @@ export function WritePage({ onBack }: WritePageProps) {
               placeholder="यहाँ अपनी रचना लिखें... / Write your masterpiece here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="min-h-[420px] text-lg leading-relaxed border border-amber-100 border-t-0 rounded-b-xl font-serif bg-white"
+              className="font-poetry min-h-[420px] text-lg border border-amber-100 border-t-0 rounded-b-xl bg-white"
+              style={{ lineHeight: 1.85 }}
             />
             <div className="flex items-center justify-between mt-2">
               <p className="text-sm text-gray-500">{content.split('\n').length} lines · {content.split(/\s+/).filter(w => w).length} words</p>

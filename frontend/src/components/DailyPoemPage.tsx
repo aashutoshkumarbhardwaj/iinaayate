@@ -66,7 +66,15 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
         </div>
 
         {/* Featured Poem Card */}
-        <div className="bg-white rounded-3xl border-2 border-amber-200 shadow-2xl p-8 md:p-12 mb-12">
+        <div className="relative bg-white rounded-3xl border-2 border-amber-200 shadow-2xl p-8 md:p-12 mb-12">
+          {/* Decorative Hindi letter */}
+          <div
+            className="absolute right-8 top-8 select-none font-serif text-[4rem] md:text-[5rem] font-semibold leading-none text-amber-100/60 pointer-events-none"
+            style={{ transform: 'translateX(4px)' }}
+          >
+            अ
+          </div>
+
           {/* Author Info */}
           {featuredPost && featuredAuthor && (
             <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
@@ -101,7 +109,7 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
           {/* Poem Content */}
           <div className="max-w-2xl mx-auto">
             {featuredPost && (
-              <div className="text-2xl text-gray-800 leading-relaxed whitespace-pre-wrap text-center mb-8 font-serif">
+              <div className="font-poetry text-2xl text-gray-800 whitespace-pre-wrap text-center mb-8" style={{ lineHeight: 1.85 }}>
                 {featuredPost.content}
               </div>
             )}

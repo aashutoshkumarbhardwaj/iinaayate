@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Check } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -25,6 +25,10 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
   const [isLiked, setIsLiked] = useState<boolean>(!!post.isLiked);
   const [likes, setLikes] = useState<number>(
     typeof post.likesCount === 'number' ? post.likesCount : (counts.likes ?? 0)
+  );
+  const [isSaved, setIsSaved] = useState<boolean>(!!post.isSaved);
+  const [savedCount, setSavedCount] = useState<number>(
+    typeof post.savedCount === 'number' ? post.savedCount : (counts.saved ?? 0)
   );
 
   const timeAgo = (date?: Date | null) => {
@@ -68,6 +72,25 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
     })();
   };
 
+  const handleToggleSave = () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    const next = !isSaved;
+    setIsSaved(next);
+    setSavedCount((prev) => (next ? prev + 1 : Math.max(0, prev - 1)));
+
+    (async () => {
+      try {
+        if (next) await postAPI.savePost(post.id);
+        else await postAPI.unsavePost(post.id);
+      } catch {
+        setIsSaved(!next);
+        setSavedCount((prev) => (!next ? prev + 1 : Math.max(0, prev - 1)));
+      }
+    })();
+  };
+
   return (
     <motion.article
       whileHover={{ y: -4 }}
@@ -82,9 +105,16 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
           </Avatar>
         </button>
         <div className="min-w-0 flex-1">
-          <button onClick={() => onUserClick(user.id)} className="transition-colors hover:text-slate-700">
-            <p className="truncate font-medium text-slate-950">{user.name}</p>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => onUserClick(user.id)} className="transition-colors hover:text-slate-700">
+              <p className="truncate font-medium text-slate-950">{user.name}</p>
+            </button>
+            {user.isVerified && (
+              <div className="flex-shrink-0 rounded-full bg-blue-500 p-0.5">
+                <Check className="h-3 w-3 text-white fill-white" />
+              </div>
+            )}
+          </div>
           <p className="text-sm text-slate-500">Posted {timeAgo(createdDate)}</p>
         </div>
         {post.genre && (
@@ -95,10 +125,15 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
       </div>
 
       <button onClick={() => onPostClick(post.id)} className="w-full text-left">
-        <h3 className="mb-3 text-2xl font-semibold tracking-tight text-slate-950 transition-colors duration-300 group-hover:text-slate-700">
-          {post.title}
-        </h3>
-        <div className="whitespace-pre-wrap text-base leading-8 text-slate-600">{previewLines}</div>
+        <div className="flex items-center gap-2">
+          <h3 className="mb-3 text-2xl font-semibold tracking-tight text-slate-950 transition-colors duration-300 group-hover:text-slate-700">
+            {post.title}
+          </h3>
+          {post.isVerified && (
+            <Check className="h-5 w-5 text-blue-500 fill-blue-500 flex-shrink-0 mt-1" />
+          )}
+        </div>
+        <div className="font-poetry whitespace-pre-wrap text-base leading-8 text-slate-600">{previewLines}</div>
         {hasMore && (
           <div className="mt-4 inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs uppercase tracking-[0.22em] text-slate-500">
             Continue reading
@@ -116,23 +151,44 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
       <div className="glass-panel flex flex-wrap items-center gap-5 rounded-[20px] border border-slate-200 px-4 py-3 text-slate-500">
         <button
           onClick={handleToggleLike}
-          className={`flex items-center gap-2 transition-transform duration-300 hover:scale-105 ${isLiked ? 'text-sky-600' : ''}`}
+          className={`flex items-center gap-2 transition-transform duration-300 hover:scale-105 ${isLiked ? 'text-rose-500' : ''}`}
         >
-          <Heart className={`h-4 w-4 ${isLiked ? 'fill-sky-600 text-sky-600' : ''}`} />
-          <span className="text-sm">{fmt(likes)}</span>
+          <Heart className={`h-4 w-4 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
+          <span className="text-sm font-medium">{fmt(likes)}</span>
         </button>
-        <div className="flex items-center gap-2">
+        <button 
+          onClick={() => onPostClick(post.id)}
+          className="flex items-center gap-2 transition-transform duration-300 hover:scale-105 hover:text-slate-700"
+        >
           <MessageCircle className="h-4 w-4" />
-          <span className="text-sm">{fmt(counts.comments)}</span>
-        </div>
-        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{fmt(counts.comments)}</span>
+        </button>
+        <button
+          onClick={() => {
+            const text = `${post.title}\n\n${previewLines}`;
+            if (navigator.share) {
+              navigator.share({
+                title: post.title,
+                text: text,
+              }).catch(() => {});
+            }
+          }}
+          className="flex items-center gap-2 transition-transform duration-300 hover:scale-105 hover:text-slate-700"
+        >
           <Share2 className="h-4 w-4" />
-          <span className="text-sm">{fmt(post.shares)}</span>
-        </div>
-        <div className="ml-auto flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
-          <Bookmark className={`h-4 w-4 ${post.isSaved ? 'fill-sky-600 text-sky-600' : ''}`} />
-          <span className="text-sm text-slate-500">Save</span>
-        </div>
+          <span className="text-sm font-medium">{fmt(post.shares || 0)}</span>
+        </button>
+        <button
+          onClick={handleToggleSave}
+          className={`ml-auto flex items-center gap-2 rounded-full border px-3 py-1.5 transition-all duration-300 hover:scale-105 ${
+            isSaved 
+              ? 'border-rose-200 bg-rose-50 text-rose-500' 
+              : 'border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:bg-rose-50'
+          }`}
+        >
+          <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-rose-500 text-rose-500' : ''}`} />
+          <span className="text-sm font-medium">{isSaved ? fmt(savedCount) : 'Save'}</span>
+        </button>
       </div>
     </motion.article>
   );

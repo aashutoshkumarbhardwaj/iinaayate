@@ -43,7 +43,7 @@ const corsOptions = {
     optionsSuccessStatus: 200,
 };
 app.use((0, cors_1.default)(corsOptions));
-app.options('*', (0, cors_1.default)(corsOptions));
+app.options(/.*/, (0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 // Simple request logger to debug routes
 app.use((req, _res, next) => {

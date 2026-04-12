@@ -15,27 +15,31 @@ import transliterateRoutes from './routes/transliterate';
 
 const app = express();
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
+const corsOptions = {
+  origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+    const allowed = [
+      'http://localhost:3000',
+      'https://iinaayate.in',
+      'https://www.iinaayate.in',
+      'http://localhost:5173',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3001',
+      FRONTEND_ORIGIN,
+    ].filter(Boolean) as string[];
+    if (!origin) return cb(null, true);
+    const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
+    if (allowed.includes(origin) || isLocalhost) return cb(null, true);
+    return cb(null, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  optionsSuccessStatus: 200,
+};
 app.use(
-  cors({
-    origin: (origin, cb) => {
-      const allowed = [
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://localhost:3001',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:3001',
-        
-        FRONTEND_ORIGIN,
-      ].filter(Boolean) as string[];
-      if (!origin) return cb(null, true);
-      const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
-      if (allowed.includes(origin) || isLocalhost) return cb(null, true);
-      return cb(null, false);
-    },
-    credentials: true,
-  })
+  cors(corsOptions)
 );
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Simple request logger to debug routes

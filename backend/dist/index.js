@@ -19,10 +19,12 @@ const collections_1 = __importDefault(require("./routes/collections"));
 const transliterate_1 = __importDefault(require("./routes/transliterate"));
 const app = (0, express_1.default)();
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
-app.use((0, cors_1.default)({
+const corsOptions = {
     origin: (origin, cb) => {
         const allowed = [
             'http://localhost:3000',
+            'https://iinaayate.in',
+            'https://www.iinaayate.in',
             'http://localhost:5173',
             'http://localhost:3001',
             'http://127.0.0.1:3000',
@@ -37,8 +39,11 @@ app.use((0, cors_1.default)({
             return cb(null, true);
         return cb(null, false);
     },
-    credentials: true,
-}));
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    optionsSuccessStatus: 200,
+};
+app.use((0, cors_1.default)(corsOptions));
+app.options('*', (0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 // Simple request logger to debug routes
 app.use((req, _res, next) => {

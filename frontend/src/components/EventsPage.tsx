@@ -190,7 +190,7 @@ export function EventsPage({ onBack, onView }: EventsPageProps) {
   const secondDate = safeDate(secondEvent?.startsAt);
 
   return (
-    <div className="min-h-screen bg-[#fdf9f3] text-[#1c1c18]">
+    <div className="min-h-screen bg-app text-[#1c1c18]">
       <Helmet>
         <title>Events & Gatherings – iinaayate</title>
         <meta name="description" content="Discover mushairas, poetry slams, and workshops on iinaayate." />

@@ -44,8 +44,8 @@ export function StorePage({ onBack }: StorePageProps) {
   const archiveCards = useMemo(() => products.slice(1, 5), [products]);
   const collectionCards = useMemo(() => products.slice(0, 4), [products]);
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#fdf9f3] font-body text-[#1c1c18] antialiased">
-      <nav className="fixed top-0 z-50 w-full border-b border-black/5 bg-[#fdf9f3] shadow-[0_1px_12px_rgba(15,23,42,0.06)]">
+    <div className="min-h-screen overflow-x-hidden bg-app font-body text-[#1c1c18] antialiased">
+      <nav className="fixed top-0 z-50 w-full border-b border-black/5 bg-app shadow-[0_1px_12px_rgba(15,23,42,0.06)]">
         <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-4 py-4 sm:px-6 lg:px-12 lg:py-6">
           <div className="font-serif text-[1.05rem] font-bold text-[#1A2E44] md:text-2xl">
             The Modern Mushaira

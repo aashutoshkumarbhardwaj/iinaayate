@@ -95,6 +95,23 @@ router.get('/top', async (req, res) => {
         isLiked: likedSet.has(p.id),
     })));
 });
+router.get('/moods', async (_req, res) => {
+    const moods = await prisma_1.prisma.post.groupBy({
+        by: ['mood'],
+        where: { mood: { not: null } },
+        _count: { mood: true },
+        orderBy: { _count: { mood: 'desc' } },
+        take: 12,
+    });
+    res.json({
+        moods: moods
+            .filter((entry) => entry.mood !== null)
+            .map((entry) => ({
+            mood: entry.mood,
+            count: entry._count.mood,
+        })),
+    });
+});
 router.get('/saved', auth_1.requireAuth, async (req, res) => {
     const saves = await prisma_1.prisma.save.findMany({
         where: { userId: req.userId },

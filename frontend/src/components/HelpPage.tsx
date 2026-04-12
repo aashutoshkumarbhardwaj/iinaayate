@@ -43,7 +43,7 @@ export function HelpPage({ onBack }: HelpPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+    <div className="min-h-screen bg-app">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-8">
           <Button variant="ghost" onClick={onBack} className="mb-4 -ml-2">

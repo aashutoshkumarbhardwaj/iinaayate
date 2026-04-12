@@ -1,9 +1,10 @@
 import { Heart, MessageCircle, Share2, Bookmark, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { postAPI } from '../utils/api';
+import { PostOwnerMenu } from './PostOwnerMenu';
 
 interface PostCardProps {
   post: any;
@@ -12,24 +13,35 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
-  const user = post.user;
-  if (!user) return null;
+  const [localPost, setLocalPost] = useState(post);
+  const [isDeleted, setIsDeleted] = useState(false);
+  const user = localPost.user;
 
-  const content = post.content || '';
+  useEffect(() => {
+    setLocalPost(post);
+    setIsDeleted(false);
+  }, [post]);
+
+  const content = localPost.content || '';
   const previewLines = content.split('\n').slice(0, 4).join('\n');
   const hasMore = content.split('\n').length > 4;
-  const createdDate = post.createdAt ? new Date(post.createdAt) : null;
+  const createdDate = localPost.createdAt ? new Date(localPost.createdAt) : null;
   const createdAt = createdDate ? new Date(createdDate).toLocaleString() : '';
-  const counts = post._count || {};
+  const counts = localPost._count || {};
 
-  const [isLiked, setIsLiked] = useState<boolean>(!!post.isLiked);
+  const [isLiked, setIsLiked] = useState<boolean>(!!localPost.isLiked);
   const [likes, setLikes] = useState<number>(
-    typeof post.likesCount === 'number' ? post.likesCount : (counts.likes ?? 0)
+    typeof localPost.likesCount === 'number' ? localPost.likesCount : (counts.likes ?? 0)
   );
-  const [isSaved, setIsSaved] = useState<boolean>(!!post.isSaved);
+  const [isSaved, setIsSaved] = useState<boolean>(!!localPost.isSaved);
   const [savedCount, setSavedCount] = useState<number>(
-    typeof post.savedCount === 'number' ? post.savedCount : (counts.saved ?? 0)
+    typeof localPost.savedCount === 'number' ? localPost.savedCount : (counts.saved ?? 0)
   );
+
+  if (!user || isDeleted) return null;
+
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('currentUserId') : null;
+  const isOwner = !!currentUserId && currentUserId === user.id;
 
   const timeAgo = (date?: Date | null) => {
     if (!date) return '';
@@ -63,8 +75,8 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
 
     (async () => {
       try {
-        if (next) await postAPI.likePost(post.id);
-        else await postAPI.unlikePost(post.id);
+        if (next) await postAPI.likePost(localPost.id);
+        else await postAPI.unlikePost(localPost.id);
       } catch {
         setIsLiked(!next);
         setLikes((prev) => (!next ? prev + 1 : Math.max(0, prev - 1)));
@@ -82,8 +94,8 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
 
     (async () => {
       try {
-        if (next) await postAPI.savePost(post.id);
-        else await postAPI.unsavePost(post.id);
+        if (next) await postAPI.savePost(localPost.id);
+        else await postAPI.unsavePost(localPost.id);
       } catch {
         setIsSaved(!next);
         setSavedCount((prev) => (!next ? prev + 1 : Math.max(0, prev - 1)));
@@ -117,19 +129,26 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
           </div>
           <p className="text-sm text-slate-500">Posted {timeAgo(createdDate)}</p>
         </div>
-        {post.genre && (
+        {localPost.genre && (
           <Badge variant="secondary" className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-slate-700">
-            {post.genre}
+            {localPost.genre}
           </Badge>
         )}
+        <PostOwnerMenu
+          post={localPost}
+          isOwner={isOwner}
+          onUpdated={(updated) => setLocalPost(updated)}
+          onDeleted={() => setIsDeleted(true)}
+          className="ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950"
+        />
       </div>
 
-      <button onClick={() => onPostClick(post.id)} className="w-full text-left">
+      <button onClick={() => onPostClick(localPost.id)} className="w-full text-left">
         <div className="flex items-center gap-2">
           <h3 className="mb-3 text-2xl font-semibold tracking-tight text-slate-950 transition-colors duration-300 group-hover:text-slate-700">
-            {post.title}
+            {localPost.title}
           </h3>
-          {post.isVerified && (
+          {localPost.isVerified && (
             <Check className="h-5 w-5 text-blue-500 fill-blue-500 flex-shrink-0 mt-1" />
           )}
         </div>
@@ -142,8 +161,8 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
       </button>
 
       <div className="flex flex-wrap gap-2">
-        {post.genre && (
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">#{post.genre}</span>
+        {localPost.genre && (
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">#{localPost.genre}</span>
         )}
         <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">{createdAt}</span>
       </div>
@@ -157,7 +176,7 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
           <span className="text-sm font-medium">{fmt(likes)}</span>
         </button>
         <button 
-          onClick={() => onPostClick(post.id)}
+          onClick={() => onPostClick(localPost.id)}
           className="flex items-center gap-2 transition-transform duration-300 hover:scale-105 hover:text-slate-700"
         >
           <MessageCircle className="h-4 w-4" />
@@ -165,10 +184,10 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
         </button>
         <button
           onClick={() => {
-            const text = `${post.title}\n\n${previewLines}`;
+            const text = `${localPost.title}\n\n${previewLines}`;
             if (navigator.share) {
               navigator.share({
-                title: post.title,
+                title: localPost.title,
                 text: text,
               }).catch(() => {});
             }
@@ -176,7 +195,7 @@ export function PostCard({ post, onPostClick, onUserClick }: PostCardProps) {
           className="flex items-center gap-2 transition-transform duration-300 hover:scale-105 hover:text-slate-700"
         >
           <Share2 className="h-4 w-4" />
-          <span className="text-sm font-medium">{fmt(post.shares || 0)}</span>
+          <span className="text-sm font-medium">{fmt(localPost.shares || 0)}</span>
         </button>
         <button
           onClick={handleToggleSave}

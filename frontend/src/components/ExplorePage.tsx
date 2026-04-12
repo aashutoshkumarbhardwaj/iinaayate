@@ -145,13 +145,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
   }, [feedPosts]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f8f4ee]">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-10%] top-[-8%] h-80 w-80 rounded-full bg-[#f4a261]/18 blur-3xl" />
-        <div className="absolute right-[-8%] top-[7%] h-[26rem] w-[26rem] rounded-full bg-[#1a2e44]/10 blur-3xl" />
-        <div className="absolute bottom-[12%] left-[18%] h-96 w-96 rounded-full bg-[#e66f87]/10 blur-3xl" />
-        <div className="absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(255,255,255,0.18)_45%,transparent_70%)]" />
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-app">
       <div className="relative">
       <Helmet>
         <title>Explore Poetry – iinaayate</title>

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { commentAPI, postAPI, userAPI, transliterateAPI } from '../utils/api';
 import { Helmet } from 'react-helmet-async';
 import { simplifyText, hasSimplifiableText } from '../utils/textNormalization';
+import { PostOwnerMenu } from './PostOwnerMenu';
 
 interface PostDetailsPageProps {
   postId: string;
@@ -159,11 +160,14 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
     // In a real implementation, this would generate a beautiful image with the poem text
   };
 
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('currentUserId') : null;
+  const isOwner = !!currentUserId && currentUserId === user.id;
+
   
   
   const relatedPosts: any[] = [];
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+    <div className="min-h-screen bg-app">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Helmet>
           <title>{`${post.title || 'Poem'} – ${user.name} | iinaayate`}</title>
@@ -173,10 +177,17 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
           <meta property="og:title" content={`${post.title || 'Poem'} – ${user.name}`} />
           <meta property="og:description" content={(post.content || '').split('\n').slice(0, 2).join(' ').slice(0, 200)} />
         </Helmet>
-        {/* Back */}
-        <Button variant="ghost" onClick={onBack} className="mb-6 -ml-2">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back
-        </Button>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <Button variant="ghost" onClick={onBack} className="-ml-2">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
+          </Button>
+          <PostOwnerMenu
+            post={post}
+            isOwner={isOwner}
+            onUpdated={(updated) => setPost(updated)}
+            onDeleted={onBack}
+          />
+        </div>
 
         {/* Title + date */}
         <h1 className="font-poetry text-5xl text-gray-900 text-center mb-2" style={{ lineHeight: 1.15 }}>{post.title}</h1>

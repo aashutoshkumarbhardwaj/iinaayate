@@ -54,7 +54,7 @@ export function BlogDetailsPage({ postId, onBack, onPostClick }: BlogDetailsPage
 
   if (loading || !post) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-app">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <Button variant="ghost" onClick={onBack} className="-ml-2"><ArrowLeft className="w-4 h-4 mr-2"/>Back</Button>
           <div className="mt-6 text-gray-500">Loading…</div>
@@ -64,7 +64,7 @@ export function BlogDetailsPage({ postId, onBack, onPostClick }: BlogDetailsPage
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-app">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <Button variant="ghost" onClick={onBack} className="-ml-2"><ArrowLeft className="w-4 h-4 mr-2"/>Back</Button>
       </div>

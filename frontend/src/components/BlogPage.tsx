@@ -217,10 +217,9 @@ export function BlogPage({ onBack, onBlogClick }: BlogPageProps) {
     : 'Exploring the layered history of language, memory, and modern verse.';
 
   return (
-    <div className="relative min-h-screen bg-[#fafaf8] text-[#1C1C1E]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(176,132,78,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.05),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.0)_0%,rgba(250,250,248,1)_35%)]" />
+    <div className="relative min-h-screen bg-app text-[#1C1C1E]">
       <div className="relative mx-auto max-w-7xl px-4 pb-28 pt-4 sm:px-6 lg:px-8 lg:pb-24">
-        <div className="sticky top-0 z-30 -mx-4 mb-8 border-b border-black/5 bg-[#fafaf8]/88 px-4 py-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="sticky top-0 z-30 -mx-4 mb-8 border-b border-black/5 bg-[#fdf9f3] px-4 py-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex items-center justify-between">
             <Button variant="ghost" onClick={onBack} className="-ml-2 rounded-full px-3 text-[#1A2E44] hover:bg-white">
               <ArrowLeft className="mr-2 h-4 w-4" />

@@ -1,5 +1,5 @@
 import { Search, ArrowLeft } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Input } from './ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
@@ -23,11 +23,10 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
   const [topIndex, setTopIndex] = useState(0);
   const [topHover, setTopHover] = useState(false);
   const [featuredPoets, setFeaturedPoets] = useState<any[]>([]);
+  const searchRequestId = useRef(0);
 
   useEffect(() => {
-    if (initialQuery) {
-      handleSearch(initialQuery);
-    }
+    setQuery(initialQuery);
   }, [initialQuery]);
 
   useEffect(() => {
@@ -56,29 +55,51 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
     return () => clearInterval(id);
   }, [topPosts.length, topHover]);
 
+  useEffect(() => {
+    const searchQuery = query.trim();
+    if (!searchQuery) {
+      searchRequestId.current += 1;
+      setIsSearching(false);
+      setHasSearched(false);
+      setResults({ posts: [], users: [] });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void handleSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const handleSearch = async (searchQuery: string = query) => {
     if (!searchQuery.trim()) return;
 
+    const requestId = ++searchRequestId.current;
     setIsSearching(true);
     setHasSearched(true);
     try {
       const data = await searchAPI.search(searchQuery);
+      if (requestId !== searchRequestId.current) return;
       setResults(data);
     } catch (error) {
+      if (requestId !== searchRequestId.current) return;
       console.error('Search error:', error);
     } finally {
+      if (requestId !== searchRequestId.current) return;
       setIsSearching(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSearch();
+      e.preventDefault();
+      void handleSearch();
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+    <div className="min-h-screen bg-app">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -103,11 +124,14 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
               placeholder="Search for poems, poets, or topics..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               className="pl-12 pr-4 h-14 text-lg border-gray-300 focus:ring-rose-500"
               autoFocus
             />
           </div>
+          <p className="mt-3 text-sm text-gray-500">
+            Search understands Hindi, Urdu, Hinglish, and transliterated spellings.
+          </p>
         </div>
 
         {/* Explore-like header content */}

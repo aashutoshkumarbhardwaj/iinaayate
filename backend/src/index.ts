@@ -228,6 +228,28 @@ console.log('Mounted /collections');
 app.use('/transliterate', transliterateRoutes);
 console.log('Mounted /transliterate');
 
+app.get('/posts/moods', async (_req, res) => {
+  try {
+    const moods = await prisma.post.groupBy({
+      by: ['mood'],
+      where: { mood: { not: null } },
+      _count: { mood: true },
+      orderBy: { _count: { mood: 'desc' } },
+      take: 12,
+    });
+    res.json({
+      moods: moods
+        .filter((entry): entry is typeof entry & { mood: string | null } => entry.mood !== null)
+        .map((entry) => ({
+          mood: entry.mood,
+          count: entry._count.mood,
+        })),
+    });
+  } catch (e) {
+    res.json({ moods: [] });
+  }
+});
+
 // Root status endpoint for primary URL
 app.get('/', (_req: express.Request, res: express.Response) => {
   res.status(200).json({

@@ -104,7 +104,7 @@ export function EventDetailsPage({ eventId, onBack, onView }: EventDetailsPagePr
 
   if (loading || !event) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-app">
         <div className="max-w-5xl mx-auto px-4 py-6">
           <Button variant="ghost" onClick={onBack} className="-ml-2"><ArrowLeft className="w-4 h-4 mr-2"/>Back</Button>
           <div className="mt-6 text-gray-500">Loading event…</div>
@@ -114,7 +114,7 @@ export function EventDetailsPage({ eventId, onBack, onView }: EventDetailsPagePr
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-app">
       <div className="max-w-5xl mx-auto px-4 py-6">
         <Button variant="ghost" onClick={onBack} className="-ml-2"><ArrowLeft className="w-4 h-4 mr-2"/>Back</Button>
       </div>

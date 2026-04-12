@@ -69,7 +69,7 @@ export function CollectionsPage({ onBack, onCollectionClick }: CollectionsPagePr
   const pageItems = collections.slice(start, start + pageSize);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+    <div className="min-h-screen bg-app">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

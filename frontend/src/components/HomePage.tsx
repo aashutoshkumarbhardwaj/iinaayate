@@ -17,6 +17,7 @@ import { moodsAPI, postAPI, statsAPI, userAPI } from '../utils/api';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { SwipeableCardStack } from './ui/tinder-like-swipe';
+import { PostOwnerMenu } from './PostOwnerMenu';
 
 interface HomePageProps {
   onPostClick: (postId: string) => void;
@@ -92,6 +93,8 @@ function PoetryCard({
   onUserClick: (userId: string) => void;
   compact?: boolean;
 }) {
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('currentUserId') : null;
+  const isOwner = !!currentUserId && currentUserId === post?.user?.id;
   return (
     <article className={`relative overflow-hidden rounded-[8px] border border-[#f3ede4] bg-[#fffdfa] text-[#6f7f91] shadow-[0_8px_24px_rgba(26,46,68,0.04)] ${compact ? 'p-4' : 'p-5 md:p-6'}`}>
       <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-[#f6f0e7]" aria-hidden="true" />
@@ -118,6 +121,13 @@ function PoetryCard({
               {post.genre || 'Kavita'}
             </p>
           </div>
+          <PostOwnerMenu
+            post={post}
+            isOwner={isOwner}
+            onUpdated={() => window.location.reload()}
+            onDeleted={() => window.location.reload()}
+            className="ml-auto flex h-8 w-8 items-center justify-center rounded-full border border-[#e8ddd1] bg-white text-[#8e4e14] transition-colors hover:bg-[#f0ebe5]"
+          />
         </div>
 
         <button onClick={() => onPostClick(post.id)} className="mt-5 block text-left">
@@ -167,9 +177,6 @@ function JournalCard({
               {title}
             </h4>
           </div>
-          <span className="shrink-0 rounded-full border border-[#e8ddd1] bg-white/80 px-3 py-1 text-[0.64rem] uppercase tracking-[0.28em] text-[#8e4e14]">
-            {post?.genre || 'Lekh'}
-          </span>
         </div>
 
         <p className="mt-4 line-clamp-4 flex-1 whitespace-pre-wrap text-[0.98rem] leading-7 text-[#46505d]">
@@ -303,6 +310,8 @@ function MinimalPoetryCard({
   onPostClick: (postId: string) => void;
   onUserClick: (userId: string) => void;
 }) {
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('currentUserId') : null;
+  const isOwner = !!currentUserId && currentUserId === post?.user?.id;
   return (
     <article 
       onClick={() => onPostClick(post.id)}
@@ -342,20 +351,13 @@ function MinimalPoetryCard({
           </div>
         </button>
 
-        {/* Three dot menu */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          className="p-2 hover:bg-[#f0ebe5] rounded-full transition-colors text-[#a89968] hover:text-[#8e4e14] flex-shrink-0"
-          aria-label="More options"
-        >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-            <circle cx="6" cy="12" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="18" cy="12" r="2" />
-          </svg>
-        </button>
+          <PostOwnerMenu
+            post={post}
+            isOwner={isOwner}
+            onUpdated={() => window.location.reload()}
+            onDeleted={() => window.location.reload()}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[#a89968] transition-colors hover:bg-[#f0ebe5] hover:text-[#8e4e14]"
+          />
       </div>
 
       {/* Poetry text - centered and prominent */}
@@ -891,7 +893,7 @@ export function HomePage({ onPostClick, onUserClick, onNavigate }: HomePageProps
   const goEvents = () => onNavigate?.('events');
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#fdf9f3]">
+    <div className="relative min-h-screen overflow-hidden bg-app">
       <Helmet>
         <title>iinaayate - Hindi Urdu Poetry & Shayari</title>
         <meta name="description" content="Read, write, and share Hindi, Urdu, and Hinglish poetry and shayari on iinaayate. Discover ghazals, nazms, sher, and more." />
@@ -900,18 +902,10 @@ export function HomePage({ onPostClick, onUserClick, onNavigate }: HomePageProps
         <meta property="og:description" content="Read, write, and share poetry and shayari in Hindi, Urdu, and Hinglish." />
       </Helmet>
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-8%] top-[-6%] h-72 w-72 rounded-full bg-[#F4A261]/15 blur-3xl" />
-        <div className="absolute right-[-4%] top-[12%] h-96 w-96 rounded-full bg-[#1A2E44]/10 blur-3xl" />
-        <div className="absolute bottom-[10%] left-[20%] h-80 w-80 rounded-full bg-sky-200/12 blur-3xl" />
-      </div>
-
       <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-16 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
 
         {/* ── Hero / Kavita ka Din ── */}
         <section className="relative mt-4 mb-4 flex flex-col items-center gap-8">
-          <div className="absolute -top-12 -left-8 h-64 w-64 rounded-full bg-[#F4A261]/10 blur-3xl -z-10" />
-
           <PoetryHeroSwipeCard
             poetryOfDay={poetryOfDay}
             poetryOfDayText={poetryOfDayText}

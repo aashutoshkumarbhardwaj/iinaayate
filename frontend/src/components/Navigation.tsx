@@ -75,7 +75,7 @@ export function Navigation({ currentPage, onNavigate, onLogout, isAuthenticated 
     { key: 'home', label: 'SANCHAY', icon: BookMarked },
     { key: 'explore', label: 'KHOJ', icon: Search },
     { key: 'write', label: 'LEKHAN', icon: PenSquare },
-    // { key: 'store', label: 'PUSTAKALAY', icon: LibraryBig },
+    { key: 'profile', label: 'PROFILE', icon: User },
   ] as const;
 
   const mobileDrawerLinks = [
@@ -95,8 +95,8 @@ export function Navigation({ currentPage, onNavigate, onLogout, isAuthenticated 
 
   return (
     <>
-      <nav className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/75 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/70">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+      <nav className="sticky top-0 z-50 border-b border-slate-200/70 bg-[#fdf9f3] backdrop-blur-2xl supports-[backdrop-filter]:bg-[#fdf9f3]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-2 sm:gap-4 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex flex-nowrap items-center justify-between gap-2 md:hidden">
             <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <DrawerTrigger asChild>
@@ -181,10 +181,10 @@ export function Navigation({ currentPage, onNavigate, onLogout, isAuthenticated 
 
             <button
               onClick={() => goMobilePage('home')}
-              className="inline-flex flex-none items-center"
+              className="inline-flex flex-none items-center leading-none"
               aria-label="Go to home"
             >
-              <img src={logoSrc} alt="iinaayate" className="h-16 w-auto object-contain sm:h-18" />
+              <img src={logoSrc} alt="iinaayate" className="block h-16 w-auto object-contain sm:h-18" />
             </button>
 
             <div className="flex flex-none items-center gap-1">
@@ -342,7 +342,7 @@ export function Navigation({ currentPage, onNavigate, onLogout, isAuthenticated 
       </nav>
 
       <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 md:hidden">
-        <div className="mx-auto max-w-md rounded-[28px] border border-white/70 bg-white/90 px-2 py-2 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+        <div className="mx-auto max-w-md rounded-[28px] border border-white/70 bg-[#fdf9f3] px-2 py-2 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
           <div className="grid grid-cols-4 gap-1">
             {mobileTabs.map((item) => {
               const Icon = item.icon;

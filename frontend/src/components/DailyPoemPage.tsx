@@ -41,7 +41,7 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-rose-50 to-purple-50">
+    <div className="min-h-screen bg-app">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <Button

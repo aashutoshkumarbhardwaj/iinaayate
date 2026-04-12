@@ -68,14 +68,14 @@ export function Navigation({ currentPage, onNavigate, onLogout, isAuthenticated 
     { key: 'writers', label: 'Writers' },
     { key: 'events', label: 'Events' },
     { key: 'blog', label: 'Journal' },
-    { key: 'store', label: 'Store' },
+    // { key: 'store', label: 'Store' },
   ];
 
   const mobileTabs = [
     { key: 'home', label: 'SANCHAY', icon: BookMarked },
     { key: 'explore', label: 'KHOJ', icon: Search },
     { key: 'write', label: 'LEKHAN', icon: PenSquare },
-    { key: 'store', label: 'PUSTAKALAY', icon: LibraryBig },
+    // { key: 'store', label: 'PUSTAKALAY', icon: LibraryBig },
   ] as const;
 
   const mobileDrawerLinks = [
@@ -84,7 +84,7 @@ export function Navigation({ currentPage, onNavigate, onLogout, isAuthenticated 
     { key: 'writers', label: 'Writers', icon: User },
     { key: 'events', label: 'Events', icon: BookMarked },
     { key: 'blog', label: 'Journal', icon: PenSquare },
-    { key: 'store', label: 'Pustakalay', icon: LibraryBig },
+    // { key: 'store', label: 'Pustakalay', icon: LibraryBig },
     { key: 'help', label: 'Help', icon: Heart },
   ] as const;
 

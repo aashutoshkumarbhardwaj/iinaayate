@@ -1,6 +1,6 @@
-import { TrendingUp, Users, Hash, Star, Headphones, Compass, Mic2, ChevronDown, ShoppingBag, Feather } from 'lucide-react';
+import { TrendingUp, Users, Hash, Star, Headphones, Compass, Mic2, ChevronDown, ShoppingBag, Feather, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { postAPI, userAPI, statsAPI, moodsAPI } from '../utils/api';
+import { postAPI, userAPI, statsAPI } from '../utils/api';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -21,11 +21,10 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
   const [topAuthors, setTopAuthors] = useState<any[]>([]);
   const [stats, setStats] = useState<{ totalPoems: number; activePoets: number; newThisWeek: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [moods, setMoods] = useState<Array<{ mood: string; count: number }>>([]);
   const [audioOnly, setAudioOnly] = useState(false);
   const [moodFilter, setMoodFilter] = useState<string | null>(null);
   const [showMoodChips, setShowMoodChips] = useState(false);
-  const [limit] = useState(100);
+  const [limit] = useState(15);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -51,19 +50,17 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
         setLoading(true);
         setOffset(0);
         setHasMore(true);
-        const [topPosts, firstPage, users, community, moodsData] = await Promise.all([
+        const [topPosts, firstPage, users, community] = await Promise.all([
           postAPI.getTopPosts(),
           postAPI.getPosts({ limit, offset: 0, hasAudio: audioOnly, mood: moodFilter || undefined }),
           userAPI.getTopUsers(),
           statsAPI.getCommunity().catch(() => null),
-          moodsAPI.get().catch(() => ({ moods: [] })),
         ]);
         if (mounted) {
           setTrendingPosts(topPosts);
           setFeedPosts(firstPage);
           setTopAuthors(users);
           if (community) setStats(community);
-          setMoods(moodsData.moods || []);
           setHasMore(Array.isArray(firstPage) && firstPage.length === limit);
           setOffset(limit);
         }
@@ -135,8 +132,27 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
       .map((g) => `#${g.name.toLowerCase()}`);
   }, [genres]);
 
+  const moods = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of feedPosts) {
+      const mood = p.mood?.trim();
+      if (!mood) continue;
+      map.set(mood, (map.get(mood) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([mood, count]) => ({ mood, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [feedPosts]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/30 via-white to-blue-50/20">
+    <div className="relative min-h-screen overflow-hidden bg-[#f8f4ee]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-[-10%] top-[-8%] h-80 w-80 rounded-full bg-[#f4a261]/18 blur-3xl" />
+        <div className="absolute right-[-8%] top-[7%] h-[26rem] w-[26rem] rounded-full bg-[#1a2e44]/10 blur-3xl" />
+        <div className="absolute bottom-[12%] left-[18%] h-96 w-96 rounded-full bg-[#e66f87]/10 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(255,255,255,0.18)_45%,transparent_70%)]" />
+      </div>
+      <div className="relative">
       <Helmet>
         <title>Explore Poetry – iinaayate</title>
         <meta name="description" content="Discover trending poems, top poets, genres, and moods on iinaayate. Explore Hindi, Urdu, and Hinglish shayari." />
@@ -144,150 +160,237 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
         <meta property="og:title" content="Explore Poetry – iinaayate" />
         <meta property="og:description" content="Trending poems, top poets, and genres in Hindi, Urdu, and Hinglish." />
       </Helmet>
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl text-gray-900 mb-3">
+        <div className="mb-12 text-center">
+          <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white/75 px-4 py-2 text-[10px] uppercase tracking-[0.35em] text-[#8e4e14] shadow-sm backdrop-blur-sm">
+            <Sparkles className="h-3.5 w-3.5" />
             Explore iinaayate
+          </div>
+          <h1 className="font-serif text-4xl text-[#1a2e44] md:text-5xl lg:text-[3.6rem]">
+            Discover poetry with more depth
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#5f6b78] md:text-lg">
             Discover trending poems, top poets, and vibrant communities
           </p>
         </div>
 
-        {/* Genre Statistics -  Style */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <button className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-8 text-center hover:shadow-xl transition-all group">
-            <p className="text-6xl mb-2 group-hover:scale-110 transition-transform" style={{ 
-              background: 'linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>71k</p>
-            <p className="text-lg text-gray-900">Sher</p>
-          </button>
-          <button className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl p-8 text-center hover:shadow-xl transition-all group">
-            <p className="text-6xl mb-2 group-hover:scale-110 transition-transform" style={{ 
-              background: 'linear-gradient(135deg, #f9a8d4 0%, #ec4899 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>56k</p>
-            <p className="text-lg text-gray-900">Ghazal</p>
-          </button>
-          <button className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-8 text-center hover:shadow-xl transition-all group">
-            <p className="text-6xl mb-2 group-hover:scale-110 transition-transform" style={{ 
-              background: 'linear-gradient(135deg, #fde047 0%, #f59e0b 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>6k</p>
-            <p className="text-lg text-gray-900">Nazm</p>
-          </button>
-        </div>
+        {/* Explore Bento Grid */}
+        <section className="mb-10 overflow-hidden rounded-[36px] border border-white/70 bg-white/55 p-4 shadow-[0_24px_60px_rgba(26,46,68,0.08)] backdrop-blur-md lg:p-6">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.35em] text-[#b98a5c]">Explore grid</p>
+              <h2 className="mt-2 font-serif text-2xl text-[#03192e]">Explore iinaayate</h2>
+            </div>
+            <p className="hidden max-w-md text-right text-sm leading-6 text-[#5f6b78] md:block">
+              A denser, more editorial layout for the same paths, tuned to feel sharper, calmer, and easier to scan.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 auto-rows-[180px] gap-3 md:grid-cols-4 md:auto-rows-[minmax(112px,auto)] md:gap-4 [grid-auto-flow:dense]">
+            <button
+              type="button"
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#fffaf0] via-[#fffdf9] to-[#f4e6d6] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:col-span-2 md:row-span-2 md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0)_55%)]" aria-hidden="true" />
+              <div className="absolute right-0 top-0 h-28 w-28 rounded-bl-full bg-[#f3d7b8]/90" aria-hidden="true" />
+              <div className="relative flex h-full flex-col justify-between gap-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.35em] text-[#8e4e14]">Sher</p>
+                    <p
+                      className="mt-4 bg-gradient-to-br from-[#1a2e44] via-[#8e4e14] to-[#f4a261] bg-clip-text font-serif text-[3rem] leading-none text-transparent md:text-[3.9rem]"
+                    >
+                      71k
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-[#eadfce] bg-white/85 p-3 text-[#8e4e14] shadow-[0_12px_24px_rgba(26,46,68,0.08)]">
+                    <Star className="h-5 w-5 fill-current" />
+                  </div>
+                </div>
+                <div className="flex items-end justify-between gap-3">
+                  <p className="max-w-[12rem] text-sm leading-6 text-[#4b5968]">
+                    The strongest pulse from the feed, framed with a quieter, more premium read.
+                  </p>
+                  <span className="rounded-full border border-[#eadfce] bg-white/80 px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-[#8e4e14] shadow-sm">
+                    Live
+                  </span>
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#fff1f6] via-[#fffdf9] to-[#f8e5ee] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0)_55%)]" aria-hidden="true" />
+              <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-[#efbfd0]/90" aria-hidden="true" />
+              <div className="relative flex h-full flex-col justify-between gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-[#b65f86]">Ghazal</p>
+                  <p className="mt-4 font-serif text-[2.15rem] leading-none text-[#1a2e44]">56k</p>
+                </div>
+                <p className="text-sm leading-6 text-[#4b5968]">Romantic, layered, and easy to scan at a glance.</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#fff6df] via-[#fffdf9] to-[#f8e7bc] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.52),rgba(255,255,255,0)_58%)]" aria-hidden="true" />
+              <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-[#f0cd6f]/90" aria-hidden="true" />
+              <div className="relative flex h-full flex-col justify-between gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-[#9a6b13]">Nazm</p>
+                  <p className="mt-4 font-serif text-[2.15rem] leading-none text-[#1a2e44]">6k</p>
+                </div>
+                <p className="text-sm leading-6 text-[#4b5968]">Compact, contemporary, and visually anchored.</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setAudioOnly(true); setMoodFilter(null); }}
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#f4ecff] via-[#fffdf9] to-[#e9dcff] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:col-span-2 md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0)_58%)]" aria-hidden="true" />
+              <div className="relative flex h-full items-start justify-between gap-4">
+                <div className="max-w-sm">
+                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/85 text-[#7b4fe0] shadow-[0_12px_24px_rgba(26,46,68,0.08)] ring-1 ring-[#ead9c8]">
+                    <Headphones className="h-6 w-6" />
+                  </div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-[#7b4fe0]">Poetry audios</p>
+                  <p className="mt-3 text-sm leading-6 text-[#4b5968]">
+                    Listen-first discovery, styled to feel more like a feature tile than a shortcut.
+                  </p>
+                </div>
+                <div className="mt-auto rounded-full border border-[#eadfce] bg-white/85 px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-[#8e4e14] shadow-sm">
+                  Audio
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate?.('writers')}
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#eef8ef] via-[#fffdf9] to-[#dff0e3] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0)_60%)]" aria-hidden="true" />
+              <div className="relative flex h-full flex-col justify-between gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/85 text-[#3d7a4d] shadow-[0_12px_24px_rgba(26,46,68,0.08)] ring-1 ring-[#dfeadf]">
+                    <Compass className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.28em] text-[#6b7d6d]">Writers</span>
+                </div>
+                <p className="text-sm leading-6 text-[#4b5968]">A direct route into creator profiles and voices.</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate?.('events')}
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#eaf4ff] via-[#fffdf9] to-[#dce9fb] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0)_60%)]" aria-hidden="true" />
+              <div className="relative flex h-full flex-col justify-between gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/85 text-[#2f6fbf] shadow-[0_12px_24px_rgba(26,46,68,0.08)] ring-1 ring-[#d8e5f6]">
+                    <Mic2 className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.28em] text-[#5b7092]">Events</span>
+                </div>
+                <p className="text-sm leading-6 text-[#4b5968]">Live shayari moments, kept concise and prominent.</p>
+              </div>
+            </button>
+
+            <div className="group relative overflow-hidden rounded-[28px] border border-[#e8ddd1] bg-gradient-to-br from-[#f7f7f7] via-[#fffdfa] to-[#eef0f3] p-5 text-left shadow-[0_10px_28px_rgba(26,46,68,0.05)] transition-all duration-300 md:col-span-2 md:p-6">
+              <div className="relative flex h-full flex-col gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowMoodChips((s) => !s)}
+                  className="flex items-center justify-between text-left"
+                >
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.35em] text-[#7a7f87]">Moods</p>
+                    <p className="mt-2 text-sm leading-6 text-[#4b5968]">Filter by feeling without overwhelming the layout.</p>
+                  </div>
+                  <ChevronDown className={`h-5 w-5 text-[#7a7f87] transition-transform ${showMoodChips ? 'rotate-180' : ''}`} />
+                </button>
+                {showMoodChips && (
+                  <div className="flex flex-wrap gap-2">
+                    {moods.map((m) => (
+                      <button
+                        key={m.mood}
+                        onClick={() => { setMoodFilter(m.mood); setAudioOnly(false); }}
+                        className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${moodFilter === m.mood ? 'border-[#8e4e14] bg-[#8e4e14] text-white shadow-sm' : 'border-[#e8ddd1] bg-white text-[#46505d] hover:border-[#d7c6b3] hover:bg-[#faf7f2]'}`}
+                        title={`${m.count} posts`}
+                      >
+                        {m.mood}
+                      </button>
+                    ))}
+                    {moods.length === 0 && (
+                      <span className="text-sm text-[#7a7f87]">No moods yet</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#fff1e5] via-[#fffdf9] to-[#f5dfcb] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0)_60%)]" aria-hidden="true" />
+              <div className="relative flex h-full flex-col justify-between gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/85 text-[#c47a34] shadow-[0_12px_24px_rgba(26,46,68,0.08)] ring-1 ring-[#ead9cb]">
+                    <Feather className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.28em] text-[#9a6b13]">Sher Swipe</span>
+                </div>
+                <p className="text-sm leading-6 text-[#4b5968]">A clean swipe surface for quicker poem discovery.</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate?.('blog')}
+              className="group relative h-full overflow-hidden rounded-[28px] border border-[#ead9c8] bg-gradient-to-br from-[#fbeef3] via-[#fffdf9] to-[#f7dfe8] p-5 text-left shadow-[0_22px_50px_rgba(26,46,68,0.08)] ring-1 ring-white/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(26,46,68,0.14)] md:h-auto md:p-6"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0)_60%)]" aria-hidden="true" />
+              <div className="relative flex h-full items-center justify-between gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-[#b56a8c]">Blog</p>
+                  <p className="mt-2 text-sm leading-6 text-[#4b5968]">Editorial reading, grouped into a tighter, more premium card.</p>
+                </div>
+                <Feather className="h-5 w-5 text-[#7d8794] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </div>
+            </button>
+          </div>
+        </section>
 
         {/* Featured Daily Poem Banner */}
         <button
           onClick={onDailyPoemClick}
-          className="w-full bg-gradient-to-r from-amber-400 via-rose-400 to-purple-400 rounded-2xl p-8 mb-8 text-white hover:shadow-2xl transition-all group"
+          className="mb-8 w-full overflow-hidden rounded-[28px] border border-[#e8ddd1] bg-gradient-to-r from-[#f4a261] via-[#e66f87] to-[#8f6cf7] p-6 text-left text-white shadow-[0_14px_36px_rgba(26,46,68,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_rgba(26,46,68,0.18)] md:p-8"
         >
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <Star className="w-8 h-8 fill-white group-hover:scale-110 transition-transform" />
-            <h2 className="text-3xl">
-              Poem of the Day
-            </h2>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <Star className="h-7 w-7 fill-current" />
+              <div>
+                <h2 className="font-serif text-2xl md:text-3xl">Poem of the Day</h2>
+                <p className="mt-1 text-sm leading-6 text-white/85 md:text-base">
+                  Discover today's featured poem selected by our community
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex w-fit rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/90">
+              Featured
+            </span>
           </div>
-          <p className="text-white/90 text-lg">
-            Discover today's featured poem selected by our community
-          </p>
         </button>
-
-        {/* Quick Access Cards -  Style */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {/* Poetry Audios */}
-          <button
-            onClick={() => { setAudioOnly(true); setMoodFilter(null); }}
-            className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl p-8 hover:shadow-xl transition-all text-left group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <Headphones className="w-16 h-16 text-purple-300" />
-            </div>
-            <p className="text-lg text-gray-900">Poetry audios</p>
-          </button>
-
-          {/* Writers */}
-          <button 
-            onClick={() => onNavigate?.('writers')}
-            className="bg-gradient-to-br from-green-100 to-green-200 rounded-2xl p-8 hover:shadow-xl transition-all text-left group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-16 h-16 rounded-full bg-green-300/50 flex items-center justify-center">
-                <Compass className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            <p className="text-lg text-gray-900">Writers</p>
-          </button>
-
-          {/* Shayari Events */}
-          <button 
-            onClick={() => onNavigate?.('events')}
-            className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl p-8 hover:shadow-xl transition-all text-left group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-16 h-16 rounded-lg bg-blue-300 flex items-center justify-center">
-                <Mic2 className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            <p className="text-lg text-gray-900">Shayari Events</p>
-          </button>
-
-          {/* Moods */}
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all text-left">
-            <button
-              onClick={() => setShowMoodChips((s) => !s)}
-              className="w-full flex items-center justify-between"
-            >
-              <p className="text-lg text-gray-900">Moods</p>
-              <ChevronDown className="w-5 h-5 text-gray-600" />
-            </button>
-            {showMoodChips && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {moods.map((m) => (
-                  <button
-                    key={m.mood}
-                    onClick={() => { setMoodFilter(m.mood); setAudioOnly(false); }}
-                    className={`px-3 py-1.5 rounded-full text-sm border ${moodFilter === m.mood ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}
-                    title={`${m.count} posts`}
-                  >
-                    {m.mood}
-                  </button>
-                ))}
-                {moods.length === 0 && (
-                  <span className="text-sm text-gray-500">No moods yet</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Sher Swipe */}
-          <button className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8 hover:shadow-xl transition-all text-left group">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-orange-200 flex items-center justify-center">
-                <Feather className="w-8 h-8 text-orange-400" />
-              </div>
-            </div>
-            <p className="text-lg text-gray-900">Sher Swipe</p>
-          </button>
-
-          {/* Blog */}
-          <button 
-            onClick={() => onNavigate?.('blog')}
-            className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-2xl p-6 hover:shadow-xl transition-all text-left group flex items-center justify-between"
-          >
-            <p className="text-lg text-gray-900">Blog</p>
-            <Feather className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
 
         {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-8">
@@ -320,7 +423,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                 ))}
                 <div className="mt-2 flex justify-center">
                   <Button onClick={loadMore} disabled={loading || !hasMore} className="min-w-[160px]">
-                    {loading ? 'Loading…' : hasMore ? 'Load More' : 'No more poems'}
+                    {loading ? 'Loading…' : hasMore ? 'Next page' : 'No more poems'}
                   </Button>
                 </div>
               </TabsContent>
@@ -361,7 +464,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                 </div>
                 <div className="mt-6 flex justify-center">
                   <Button onClick={loadMore} disabled={loading || !hasMore} className="min-w-[160px]">
-                    {loading ? 'Loading…' : hasMore ? 'Load More' : 'No more poems'}
+                    {loading ? 'Loading…' : hasMore ? 'Next page' : 'No more poems'}
                   </Button>
                 </div>
               </TabsContent>
@@ -369,7 +472,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
           </div>
 
           {/* Right Column - Premium, Bookmarks & More */}
-          <div className="space-y-6">
+          <div className="hidden space-y-6 lg:block">
             {/* Premium Card */}
             <div className="bg-gray-900 rounded-2xl border-2 border-amber-400 p-6 relative overflow-hidden">
               <div className="absolute top-4 right-4">
@@ -476,6 +579,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -19,7 +19,7 @@ import { BlogPage } from './components/BlogPage';
 import { BlogDetailsPage } from './components/BlogDetailsPage';
 import { setAuthToken, authAPI } from './utils/api';
 import { HelpPage } from './components/HelpPage';
-import { StorePage } from './components/StorePage';
+// import { StorePage } from './components/StorePage';
 import { Footer } from './components/Footer';
 
 type Page = 'auth' | 'home' | 'explore' | 'write' | 'profile' | 'post' | 'search' | 'notifications' | 'settings' | 'collections' | 'daily' | 'events' | 'event' | 'writers' | 'blog' | 'blogpost' | 'help' | 'store';
@@ -196,9 +196,9 @@ export default function App() {
         <HelpPage onBack={() => setNavState({ page: 'home' })} />
       )}
 
-      {!mustAuth && navState.page === 'store' && (
+      {/* {!mustAuth && navState.page === 'store' && (
         <StorePage onBack={() => setNavState({ page: 'home' })} />
-      )}
+      )} */}
 
       {navState.page === 'collections' && !mustAuth && (
         <CollectionsPage

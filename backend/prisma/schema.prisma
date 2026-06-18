@@ -143,3 +143,12 @@ model CollectionItem {
   postId       String
   createdAt    DateTime   @default(now())
 }
+
+model Quote {
+  id        String   @id @default(cuid())
+  text      String
+  author    String
+  context   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

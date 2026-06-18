@@ -88,6 +88,42 @@ router.get('/top', async (req, res) => {
   );
 });
 
+// Genre counts for the Explore page bento grid
+router.get('/genres', async (_req, res) => {
+  try {
+    const genres = await prisma.post.groupBy({
+      by: ['genre'],
+      _count: { genre: true },
+      orderBy: { _count: { genre: 'desc' } },
+    });
+    res.json({
+      genres: genres.map((entry) => ({
+        genre: entry.genre,
+        count: entry._count.genre,
+      })),
+    });
+  } catch {
+    res.json({ genres: [] });
+  }
+});
+
+// Title suggestions pulled from real post titles in the DB
+router.get('/title-suggestions', async (_req, res) => {
+  try {
+    const posts = await prisma.post.findMany({
+      select: { title: true },
+      orderBy: { likes: { _count: 'desc' } },
+      take: 20,
+    });
+    const titles = posts
+      .map((p: { title: string }) => p.title)
+      .filter((t: string) => t && t.trim().length > 0 && t.trim().length <= 80);
+    res.json({ suggestions: titles });
+  } catch {
+    res.json({ suggestions: [] });
+  }
+});
+
 router.get('/moods', async (_req, res) => {
   const moods = await prisma.post.groupBy({
     by: ['mood'],

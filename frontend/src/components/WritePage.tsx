@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { authAPI, postAPI } from '../utils/api';
+import { authAPI, postAPI, titleSuggestionsAPI } from '../utils/api';
 
 interface WritePageProps {
   onBack: () => void;
@@ -26,13 +26,22 @@ export function WritePage({ onBack }: WritePageProps) {
   const [mobileAddOpen, setMobileAddOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; avatar: string; username?: string } | null>(null);
   const [mobilePublishError, setMobilePublishError] = useState<string | null>(null);
+  const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const posts = await postAPI.getPosts({ limit: 100 });
-        if (mounted) setFeed(posts);
+        const [posts, suggestionsRes] = await Promise.all([
+          postAPI.getPosts({ limit: 100 }),
+          titleSuggestionsAPI.get().catch(() => ({ suggestions: [] })),
+        ]);
+        if (mounted) {
+          setFeed(posts);
+          setTitleSuggestions(
+            Array.isArray((suggestionsRes as any)?.suggestions) ? (suggestionsRes as any).suggestions : []
+          );
+        }
       } catch {}
     })();
     return () => { mounted = false; };
@@ -139,14 +148,14 @@ export function WritePage({ onBack }: WritePageProps) {
   };
 
   const handleSuggestTitle = () => {
-    const suggestions = [
+    const pool = titleSuggestions.length > 0 ? titleSuggestions : [
       'Whispers of the Heart',
       'Moonlit Dreams',
       'Echoes of Tomorrow',
       'Silent Melodies',
       'Dancing with Shadows',
     ];
-    const randomTitle = suggestions[Math.floor(Math.random() * suggestions.length)];
+    const randomTitle = pool[Math.floor(Math.random() * pool.length)];
     setTitle(randomTitle);
   };
 

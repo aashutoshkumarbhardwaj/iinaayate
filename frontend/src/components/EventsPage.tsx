@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { authAPI, eventsAPI, getAuthToken } from '../utils/api';
+import { authAPI, eventsAPI, getAuthToken, quotesAPI } from '../utils/api';
 
 interface EventsPageProps {
   onBack: () => void;
@@ -50,6 +50,7 @@ export function EventsPage({ onBack, onView }: EventsPageProps) {
   const [form, setForm] = useState({ title: '', subtitle: '', startsAt: '', location: '', poster: '' });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [featuredQuote, setFeaturedQuote] = useState<{ text: string; author: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -60,6 +61,15 @@ export function EventsPage({ onBack, onView }: EventsPageProps) {
       } finally {
         if (mounted) setLoading(false);
       }
+    })();
+    // Load featured quote from DB
+    (async () => {
+      try {
+        const res = await quotesAPI.getRandom();
+        if (mounted && res.quote) {
+          setFeaturedQuote({ text: res.quote.text, author: res.quote.author });
+        }
+      } catch {}
     })();
     return () => {
       mounted = false;
@@ -499,11 +509,13 @@ export function EventsPage({ onBack, onView }: EventsPageProps) {
           <section className="mt-12 rounded-[28px] border-y border-[#eadfce] bg-[#fbf7f1] px-6 py-14 text-center md:px-10">
             <p className="text-[10px] uppercase tracking-[0.35em] text-[#b98a5c]">Quote</p>
             <blockquote className="mx-auto mt-5 max-w-4xl font-serif text-3xl italic leading-tight text-[#1a2e44] md:text-5xl">
-              “सितारों से आगे जहाँ और भी हैं, अभी इश्क़ के इम्तिहाँ और भी हैं।”
+              {featuredQuote?.text || 'सितारों से आगे जहाँ और भी हैं, अभी इश्क़ के इम्तिहाँ और भी हैं।'}
             </blockquote>
             <div className="mx-auto mt-5 flex items-center justify-center gap-4">
               <div className="h-px w-12 bg-[#d8cbb6]" />
-              <span className="text-xs uppercase tracking-[0.3em] text-[#8e4e14]">अल्लामा इक़बाल</span>
+              <span className="text-xs uppercase tracking-[0.3em] text-[#8e4e14]">
+                {featuredQuote?.author || 'अल्लामा इक़बाल'}
+              </span>
               <div className="h-px w-12 bg-[#d8cbb6]" />
             </div>
           </section>

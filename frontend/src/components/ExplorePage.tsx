@@ -1,6 +1,6 @@
 import { TrendingUp, Users, Hash, Star, Headphones, Compass, Mic2, ChevronDown, ShoppingBag, Feather, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { postAPI, userAPI, statsAPI } from '../utils/api';
+import { genresAPI, postAPI, userAPI, statsAPI } from '../utils/api';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -28,6 +28,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [genreCounts, setGenreCounts] = useState<Array<{ genre: string; count: number }>>([]);
   const derivedStats = useMemo(() => {
     if (!feedPosts || feedPosts.length === 0) return null;
     const totalPoems = feedPosts.length;
@@ -50,17 +51,19 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
         setLoading(true);
         setOffset(0);
         setHasMore(true);
-        const [topPosts, firstPage, users, community] = await Promise.all([
+        const [topPosts, firstPage, users, community, genreData] = await Promise.all([
           postAPI.getTopPosts(),
           postAPI.getPosts({ limit, offset: 0, hasAudio: audioOnly, mood: moodFilter || undefined }),
           userAPI.getTopUsers(),
           statsAPI.getCommunity().catch(() => null),
+          genresAPI.get().catch(() => ({ genres: [] })),
         ]);
         if (mounted) {
           setTrendingPosts(topPosts);
           setFeedPosts(firstPage);
           setTopAuthors(users);
           if (community) setStats(community);
+          setGenreCounts((genreData as any)?.genres ?? []);
           setHasMore(Array.isArray(firstPage) && firstPage.length === limit);
           setOffset(limit);
         }
@@ -144,6 +147,21 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
       .sort((a, b) => b.count - a.count);
   }, [feedPosts]);
 
+  // Helper to format counts like "1.2k", "56k"
+  function formatGenreCount(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+    return String(n);
+  }
+
+  // Lookup count for a genre from DB data
+  function getGenreCount(name: string): string {
+    const entry = genreCounts.find(
+      (g) => g.genre.toLowerCase() === name.toLowerCase()
+    );
+    return entry ? formatGenreCount(entry.count) : '—';
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-app">
       <div className="relative">
@@ -195,7 +213,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                     <p
                       className="mt-4 bg-gradient-to-br from-[#1a2e44] via-[#8e4e14] to-[#f4a261] bg-clip-text font-serif text-[3rem] leading-none text-transparent md:text-[3.9rem]"
                     >
-                      71k
+                      {getGenreCount('Sher')}
                     </p>
                   </div>
                   <div className="rounded-full border border-[#eadfce] bg-white/85 p-3 text-[#8e4e14] shadow-[0_12px_24px_rgba(26,46,68,0.08)]">
@@ -222,7 +240,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
               <div className="relative flex h-full flex-col justify-between gap-4">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.35em] text-[#b65f86]">Ghazal</p>
-                  <p className="mt-4 font-serif text-[2.15rem] leading-none text-[#1a2e44]">56k</p>
+                  <p className="mt-4 font-serif text-[2.15rem] leading-none text-[#1a2e44]">{getGenreCount('Ghazal')}</p>
                 </div>
                 <p className="text-sm leading-6 text-[#4b5968]">Romantic, layered, and easy to scan at a glance.</p>
               </div>
@@ -237,7 +255,7 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
               <div className="relative flex h-full flex-col justify-between gap-4">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.35em] text-[#9a6b13]">Nazm</p>
-                  <p className="mt-4 font-serif text-[2.15rem] leading-none text-[#1a2e44]">6k</p>
+                  <p className="mt-4 font-serif text-[2.15rem] leading-none text-[#1a2e44]">{getGenreCount('Nazm')}</p>
                 </div>
                 <p className="text-sm leading-6 text-[#4b5968]">Compact, contemporary, and visually anchored.</p>
               </div>

@@ -160,13 +160,20 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
               Why This Poem?
             </h2>
           </div>
-          <p className="text-gray-700 leading-relaxed">
-            This beautiful piece has captured the hearts of our community with its profound emotional
-            depth and masterful use of imagery. The poet's ability to weave universal themes of love,
-            longing, and hope into such elegant verses makes this a must-read for anyone who appreciates
-            the art of poetry. With {featuredPost.likes} likes and {featuredPost.comments} thoughtful
-            comments, it's clear that this poem resonates deeply with readers from all walks of life.
-          </p>
+          {featuredPost ? (
+            <p className="text-gray-700 leading-relaxed">
+              This piece has been celebrated by our community with{' '}
+              <strong>{featuredPost._count?.likes ?? featuredPost.likesCount ?? 0} likes</strong> and{' '}
+              <strong>{featuredPost._count?.comments ?? 0} thoughtful comments</strong>.
+              Its emotional depth and vivid imagery make it a standout among today's featured works.
+              The poet's craft resonates with readers who appreciate the art of poetry in Hindi, Urdu, and Hinglish.
+            </p>
+          ) : (
+            <p className="text-gray-700 leading-relaxed">
+              Today's featured poem has been selected from the most-loved works shared by our community.
+              Check back daily for a new featured piece.
+            </p>
+          )}
         </div>
 
         {/* Previous Featured Poems */}

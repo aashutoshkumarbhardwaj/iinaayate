@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { postAPI, statsAPI, userAPI } from '../utils/api';
+import { postAPI, quotesAPI, statsAPI, userAPI } from '../utils/api';
 
 interface WritersPageProps {
   onBack: () => void;
@@ -35,6 +35,7 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
   const [topPoets, setTopPoets] = useState<any[]>([]);
   const [communityStats, setCommunityStats] = useState<{ totalPoems: number; activePoets: number; newThisWeek: number } | null>(null);
   const [popularTags, setPopularTags] = useState<string[]>([]);
+  const [featuredQuote, setFeaturedQuote] = useState<{ text: string; author: string } | null>(null);
 
   // Initial load and when filters change
   useEffect(() => {
@@ -65,14 +66,18 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
     let mounted = true;
     (async () => {
       try {
-        const [topUsers, community, topPosts] = await Promise.all([
+        const [topUsers, community, topPosts, quoteRes] = await Promise.all([
           userAPI.getTopUsers().catch(() => []),
           statsAPI.getCommunity().catch(() => null),
           postAPI.getTopPosts().catch(() => []),
+          quotesAPI.getRandom().catch(() => ({ quote: null })),
         ]);
         if (!mounted) return;
         setTopPoets(Array.isArray(topUsers) ? topUsers : []);
         setCommunityStats(community);
+        if ((quoteRes as any)?.quote) {
+          setFeaturedQuote({ text: (quoteRes as any).quote.text, author: (quoteRes as any).quote.author });
+        }
         const tagCounts = new Map<string, number>();
         for (const post of Array.isArray(topPosts) ? topPosts : []) {
           const tag = post?.genre || 'Other';
@@ -183,7 +188,7 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
               <div>
                 <p className="text-[10px] uppercase tracking-[0.4em] text-white/55">Poet of the month</p>
                 <h2 className="mt-2 font-serif text-[2rem] leading-none">
-                  {featuredWriter?.name || 'अमृता प्रीतम'}
+                  {featuredWriter?.name || '—'}
                 </h2>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-[#f4a261]">
@@ -191,7 +196,7 @@ export function WritersPage({ onBack, onUserClick }: WritersPageProps) {
               </div>
             </div>
             <blockquote className="mt-4 rounded-2xl border-l-2 border-[#f4a261] bg-white/5 p-4 text-sm leading-7 italic text-white/84">
-              “अल्फ़ाज़ वही चमकते हैं, जिनमें दिल की रौशनी हो।”
+              {featuredQuote?.text || 'अल्फ़ाज़ वही चमकते हैं, जिनमें दिल की रौशनी हो।'}
             </blockquote>
             <div className="mt-4 flex gap-3">
               <Button

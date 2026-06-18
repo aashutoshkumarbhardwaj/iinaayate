@@ -241,6 +241,33 @@ export const moodsAPI = {
   },
 };
 
+// Genres API — real counts from DB
+export const genresAPI = {
+  async get(): Promise<{ genres: Array<{ genre: string; count: number }> }> {
+    return apiRequest('/posts/genres');
+  },
+};
+
+// Title suggestions API
+export const titleSuggestionsAPI = {
+  async get(): Promise<{ suggestions: string[] }> {
+    return apiRequest('/posts/title-suggestions');
+  },
+};
+
+// Quotes API
+export const quotesAPI = {
+  async getRandom(): Promise<{ quote: { id: string; text: string; author: string; context?: string } | null }> {
+    return apiRequest('/quotes/random');
+  },
+  async getAll(): Promise<{ quotes: Array<{ id: string; text: string; author: string; context?: string }> }> {
+    return apiRequest('/quotes');
+  },
+  async create(text: string, author: string, context?: string) {
+    return apiRequest('/quotes', { method: 'POST', body: JSON.stringify({ text, author, context }) });
+  },
+};
+
 // Help API
 export const helpAPI = {
   async getTickets() {

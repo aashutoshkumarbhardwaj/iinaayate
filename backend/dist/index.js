@@ -17,6 +17,7 @@ const store_1 = __importDefault(require("./routes/store"));
 const events_1 = __importDefault(require("./routes/events"));
 const collections_1 = __importDefault(require("./routes/collections"));
 const transliterate_1 = __importDefault(require("./routes/transliterate"));
+const quotes_1 = __importDefault(require("./routes/quotes"));
 const app = (0, express_1.default)();
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 const corsOptions = {
@@ -61,7 +62,7 @@ app.use('/store', store_1.default);
 app.use('/events', events_1.default);
 app.use('/collections', collections_1.default);
 app.use('/transliterate', transliterate_1.default);
-// Fallback list users (mirrors router logic)
+app.use('/quotes', quotes_1.default);
 app.get('/users', async (req, res) => {
     try {
         console.log('Handling fallback GET /users');
@@ -231,6 +232,8 @@ app.use('/collections', collections_1.default);
 console.log('Mounted /collections');
 app.use('/transliterate', transliterate_1.default);
 console.log('Mounted /transliterate');
+app.use('/quotes', quotes_1.default);
+console.log('Mounted /quotes');
 app.get('/posts/moods', async (_req, res) => {
     try {
         const moods = await prisma_1.prisma.post.groupBy({

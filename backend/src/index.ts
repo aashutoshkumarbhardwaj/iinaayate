@@ -12,6 +12,7 @@ import storeRoutes from './routes/store';
 import eventsRoutes from './routes/events';
 import collectionsRoutes from './routes/collections';
 import transliterateRoutes from './routes/transliterate';
+import quotesRoutes from './routes/quotes';
 
 const app = express();
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
@@ -59,8 +60,7 @@ app.use('/store', storeRoutes);
 app.use('/events', eventsRoutes);
 app.use('/collections', collectionsRoutes);
 app.use('/transliterate', transliterateRoutes);
-
-// Fallback list users (mirrors router logic)
+app.use('/quotes', quotesRoutes);
 app.get('/users', async (req, res) => {
   try {
     console.log('Handling fallback GET /users');
@@ -232,6 +232,8 @@ app.use('/collections', collectionsRoutes);
 console.log('Mounted /collections');
 app.use('/transliterate', transliterateRoutes);
 console.log('Mounted /transliterate');
+app.use('/quotes', quotesRoutes);
+console.log('Mounted /quotes');
 
 app.get('/posts/moods', async (_req, res) => {
   try {

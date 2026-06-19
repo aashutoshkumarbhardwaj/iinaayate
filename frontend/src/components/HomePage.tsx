@@ -8,6 +8,8 @@ import {
   Star,
   TrendingUp,
   Share2,
+  Bookmark,
+  Download,
   Users,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -18,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { SwipeableCardStack } from './ui/tinder-like-swipe';
 import { PostOwnerMenu } from './PostOwnerMenu';
+import { usePostActions } from '../hooks/usePostActions';
 
 interface HomePageProps {
   onPostClick: (postId: string) => void;
@@ -95,20 +98,17 @@ function PoetryCard({
 }) {
   const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('currentUserId') : null;
   const isOwner = !!currentUserId && currentUserId === post?.user?.id;
+  const { isLiked, likes, isSaved, toggleLike, toggleSave, share } = usePostActions(post);
+
   return (
     <article className={`relative overflow-hidden rounded-[8px] border border-[#f3ede4] bg-[#fffdfa] text-[#6f7f91] shadow-[0_8px_24px_rgba(26,46,68,0.04)] ${compact ? 'p-4' : 'p-5 md:p-6'}`}>
       <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-[#f6f0e7]" aria-hidden="true" />
       <div className="relative flex h-full min-h-[240px] flex-col">
         <div className="flex items-start gap-3">
-          <button
-            onClick={() => post.user?.id && onUserClick(post.user.id)}
-            className="shrink-0"
-          >
+          <button onClick={() => post.user?.id && onUserClick(post.user.id)} className="shrink-0">
             <Avatar className={`${compact ? 'h-10 w-10' : 'h-12 w-12'} border border-[#e7e0d7]`}>
               <AvatarImage src={post.user?.avatar || ''} alt={post.user?.name || 'Poet'} />
-              <AvatarFallback className="bg-[#1A2E44] text-white">
-                {initials(post.user?.name)}
-              </AvatarFallback>
+              <AvatarFallback className="bg-[#1A2E44] text-white">{initials(post.user?.name)}</AvatarFallback>
             </Avatar>
           </button>
           <div className="min-w-0 flex-1">
@@ -117,9 +117,7 @@ function PoetryCard({
                 {post.user?.name || 'Unknown writer'}
               </h4>
             </button>
-            <p className="mt-1 text-[0.65rem] uppercase tracking-[0.28em] text-[#b8b0a4]">
-              {post.genre || 'Kavita'}
-            </p>
+            <p className="mt-1 text-[0.65rem] uppercase tracking-[0.28em] text-[#b8b0a4]">{post.genre || 'Kavita'}</p>
           </div>
           <PostOwnerMenu
             post={post}
@@ -140,10 +138,29 @@ function PoetryCard({
         </button>
 
         <div className="mt-auto flex items-center justify-between pt-6 text-[#b8b8b8]">
-          <button type="button" className="transition-colors hover:text-[#8e4e14]" aria-label="Like poem">
-            <Heart className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
+          <button
+            type="button"
+            onClick={toggleLike}
+            className={`flex items-center gap-1.5 transition-colors hover:text-[#8e4e14] ${isLiked ? 'text-rose-500' : ''}`}
+            aria-label={isLiked ? 'Unlike' : 'Like'}
+          >
+            <Heart className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} ${isLiked ? 'fill-rose-500' : ''}`} />
+            <span className="text-xs">{likes > 0 ? likes : ''}</span>
           </button>
-          <button type="button" className="transition-colors hover:text-[#8e4e14]" aria-label="Share poem">
+          <button
+            type="button"
+            onClick={toggleSave}
+            className={`transition-colors hover:text-[#8e4e14] ${isSaved ? 'text-rose-500' : ''}`}
+            aria-label={isSaved ? 'Unsave' : 'Save'}
+          >
+            <Bookmark className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} ${isSaved ? 'fill-rose-500' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={share}
+            className="transition-colors hover:text-[#8e4e14]"
+            aria-label="Share poem"
+          >
             <Share2 className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
           </button>
         </div>
@@ -312,6 +329,8 @@ function MinimalPoetryCard({
 }) {
   const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('currentUserId') : null;
   const isOwner = !!currentUserId && currentUserId === post?.user?.id;
+  const { isLiked, toggleLike, share, download } = usePostActions(post);
+  
   return (
     <article 
       onClick={() => onPostClick(post.id)}
@@ -375,15 +394,17 @@ function MinimalPoetryCard({
         <button 
           onClick={(e) => {
             e.stopPropagation();
+            toggleLike();
           }}
-          className="transition-all duration-200 hover:text-[#d4a574] hover:scale-110 p-2" 
-          aria-label="Like poem"
+          className={`transition-all duration-200 hover:text-[#d4a574] hover:scale-110 p-2 ${isLiked ? 'text-rose-500' : ''}`}
+          aria-label={isLiked ? 'Unlike poem' : 'Like poem'}
         >
-          <Heart className="h-5 w-5" />
+          <Heart className={`h-5 w-5 ${isLiked ? 'fill-rose-500' : ''}`} />
         </button>
         <button 
           onClick={(e) => {
             e.stopPropagation();
+            share();
           }}
           className="transition-all duration-200 hover:text-[#d4a574] hover:scale-110 p-2" 
           aria-label="Share poem"
@@ -393,6 +414,7 @@ function MinimalPoetryCard({
         <button 
           onClick={(e) => {
             e.stopPropagation();
+            download();
           }}
           className="transition-all duration-200 hover:text-[#d4a574] hover:scale-110 p-2" 
           aria-label="Download poem"

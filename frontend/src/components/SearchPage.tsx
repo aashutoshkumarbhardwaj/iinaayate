@@ -6,6 +6,9 @@ import { Button } from './ui/button';
 import { PostCard } from './PostCard';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { postAPI, searchAPI, userAPI } from '../utils/api';
+import { SkeletonPostCard, SkeletonAuthorCard } from './SkeletonLoader';
+
+const ITEMS_PER_PAGE = 5;
 
 interface SearchPageProps {
   initialQuery?: string;
@@ -23,6 +26,9 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
   const [topIndex, setTopIndex] = useState(0);
   const [topHover, setTopHover] = useState(false);
   const [featuredPoets, setFeaturedPoets] = useState<any[]>([]);
+  const [topPostsLoading, setTopPostsLoading] = useState(true);
+  const [postPage, setPostPage] = useState(0);
+  const [userPage, setUserPage] = useState(0);
   const searchRequestId = useRef(0);
 
   useEffect(() => {
@@ -40,6 +46,7 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
         if (mounted) {
           setTopPosts(top || []);
           setFeaturedPoets(poets || []);
+          setTopPostsLoading(false);
         }
       } catch {}
     })();
@@ -62,6 +69,8 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
       setIsSearching(false);
       setHasSearched(false);
       setResults({ posts: [], users: [] });
+      setPostPage(0);
+      setUserPage(0);
       return;
     }
 
@@ -78,6 +87,8 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
     const requestId = ++searchRequestId.current;
     setIsSearching(true);
     setHasSearched(true);
+    setPostPage(0);
+    setUserPage(0);
     try {
       const data = await searchAPI.search(searchQuery);
       if (requestId !== searchRequestId.current) return;
@@ -97,6 +108,12 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
       void handleSearch();
     }
   };
+
+  // Pagination helpers
+  const paginatedPosts = results.posts.slice(postPage * ITEMS_PER_PAGE, (postPage + 1) * ITEMS_PER_PAGE);
+  const paginatedUsers = results.users.slice(userPage * ITEMS_PER_PAGE, (userPage + 1) * ITEMS_PER_PAGE);
+  const totalPostPages = Math.ceil(results.posts.length / ITEMS_PER_PAGE);
+  const totalUserPages = Math.ceil(results.users.length / ITEMS_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-app">
@@ -135,12 +152,22 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
         </div>
 
         {/* Explore-like header content */}
-        {(topPosts.length > 0 || featuredPoets.length > 0) && (
+        {(topPostsLoading || topPosts.length > 0 || featuredPoets.length > 0) && (
           <div className="mb-10">
-            {topPosts.length > 0 && (
+            {topPostsLoading ? (
+              <div className="mb-8">
+                <div className="text-center mb-4">
+                  <p className="uppercase tracking-[0.3em] text-xs text-gray-500">Top Poems</p>
+                </div>
+                <div className="animate-pulse space-y-2">
+                  <div className="h-12 bg-slate-200 rounded mx-auto w-3/4" />
+                  <div className="h-4 bg-slate-200 rounded mx-auto w-1/2" />
+                </div>
+              </div>
+            ) : topPosts.length > 0 && (
               <div className="mb-8" onMouseEnter={() => setTopHover(true)} onMouseLeave={() => setTopHover(false)}>
                 <div className="text-center mb-4">
-                  <p className="uppercase tracking-[0.3em] text-xs text-gray-500">Today’s Top Shayari</p>
+                  <p className="uppercase tracking-[0.3em] text-xs text-gray-500">Today's Top Shayari</p>
                 </div>
                 {(() => {
                   const p = topPosts[topIndex];
@@ -199,9 +226,31 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
 
         {/* Results */}
         {isSearching ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Searching...</p>
-          </div>
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="w-full bg-white border border-gray-200 rounded-xl p-1 mb-6">
+              <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+              <TabsTrigger value="posts" className="flex-1">Poems</TabsTrigger>
+              <TabsTrigger value="users" className="flex-1">Poets</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="space-y-6">
+              {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
+                <SkeletonPostCard key={i} />
+              ))}
+            </TabsContent>
+
+            <TabsContent value="posts" className="space-y-6">
+              {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
+                <SkeletonPostCard key={i} />
+              ))}
+            </TabsContent>
+
+            <TabsContent value="users" className="grid md:grid-cols-2 gap-4">
+              {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
+                <SkeletonAuthorCard key={i} />
+              ))}
+            </TabsContent>
+          </Tabs>
         ) : hasSearched ? (
           <Tabs defaultValue="all" className="w-full">
             <TabsList className="w-full bg-white border border-gray-200 rounded-xl p-1 mb-6">
@@ -220,11 +269,9 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
               {/* Users Section */}
               {results.users.length > 0 && (
                 <div>
-                  <h2 className="text-xl text-gray-900 mb-4">
-                    Poets
-                  </h2>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {results.users.map((user) => (
+                  <h2 className="text-xl text-gray-900 mb-4">Poets</h2>
+                  <div className="grid md:grid-cols-2 gap-4 mb-6">
+                    {paginatedUsers.map((user) => (
                       <button
                         key={user.id}
                         onClick={() => onUserClick(user.id)}
@@ -242,17 +289,25 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
                       </button>
                     ))}
                   </div>
+                  {totalUserPages > 1 && (
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={() => setUserPage((p) => (p + 1) % totalUserPages)}
+                        className="bg-rose-600 hover:bg-rose-700 text-white"
+                      >
+                        Next {ITEMS_PER_PAGE}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Posts Section */}
               {results.posts.length > 0 && (
                 <div>
-                  <h2 className="text-xl text-gray-900 mb-4">
-                    Poems
-                  </h2>
-                  <div className="space-y-6">
-                    {results.posts.map((post) => (
+                  <h2 className="text-xl text-gray-900 mb-4">Poems</h2>
+                  <div className="space-y-6 mb-6">
+                    {paginatedPosts.map((post) => (
                       <PostCard
                         key={post.id}
                         post={post}
@@ -261,6 +316,16 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
                       />
                     ))}
                   </div>
+                  {totalPostPages > 1 && (
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={() => setPostPage((p) => (p + 1) % totalPostPages)}
+                        className="bg-rose-600 hover:bg-rose-700 text-white"
+                      >
+                        Next {ITEMS_PER_PAGE}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -274,9 +339,9 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
             </TabsContent>
 
             <TabsContent value="posts">
-              <div className="space-y-6">
-                {results.posts.length > 0 ? (
-                  results.posts.map((post) => (
+              <div className="space-y-6 mb-6">
+                {paginatedPosts.length > 0 ? (
+                  paginatedPosts.map((post) => (
                     <PostCard
                       key={post.id}
                       post={post}
@@ -290,12 +355,22 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
                   </div>
                 )}
               </div>
+              {totalPostPages > 1 && (
+                <div className="flex justify-center">
+                  <Button
+                    onClick={() => setPostPage((p) => (p + 1) % totalPostPages)}
+                    className="bg-rose-600 hover:bg-rose-700 text-white"
+                  >
+                    Next {ITEMS_PER_PAGE}
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="users">
-              <div className="grid md:grid-cols-2 gap-4">
-                {results.users.length > 0 ? (
-                  results.users.map((user) => (
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                {paginatedUsers.length > 0 ? (
+                  paginatedUsers.map((user) => (
                     <button
                       key={user.id}
                       onClick={() => onUserClick(user.id)}
@@ -318,6 +393,16 @@ export function SearchPage({ initialQuery = '', onBack, onPostClick, onUserClick
                   </div>
                 )}
               </div>
+              {totalUserPages > 1 && (
+                <div className="flex justify-center">
+                  <Button
+                    onClick={() => setUserPage((p) => (p + 1) % totalUserPages)}
+                    className="bg-rose-600 hover:bg-rose-700 text-white"
+                  >
+                    Next {ITEMS_PER_PAGE}
+                  </Button>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         ) : (

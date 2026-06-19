@@ -6,6 +6,8 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { PostCard } from './PostCard';
 import { postAPI } from '../utils/api';
+import { usePostActions } from '../hooks/usePostActions';
+import { Skeleton } from './ui/skeleton';
 
 interface DailyPoemPageProps {
   onBack: () => void;
@@ -15,8 +17,6 @@ interface DailyPoemPageProps {
 
 export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPageProps) {
   const [topPosts, setTopPosts] = useState<any[]>([]);
-  const [isLiked, setIsLiked] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -32,6 +32,7 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
   const featuredPost = topPosts[0];
   const featuredAuthor = featuredPost?.user;
   const previousFeatured = topPosts.slice(1, 4);
+  const postActions = usePostActions(featuredPost);
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -76,7 +77,15 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
           </div>
 
           {/* Author Info */}
-          {featuredPost && featuredAuthor && (
+          {topPosts.length === 0 ? (
+            <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
+              <Skeleton className="w-16 h-16 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          ) : featuredPost && featuredAuthor ? (
             <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
               <button onClick={() => onUserClick(featuredAuthor.id)}>
                 <Avatar className="w-16 h-16 ring-2 ring-amber-200">
@@ -97,22 +106,30 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
                 {featuredPost?.genre}
               </Badge>
             </div>
-          )}
+          ) : null}
 
           {/* Poem Title */}
-          {featuredPost && (
+          {topPosts.length === 0 ? (
+            <Skeleton className="h-12 w-3/4 rounded mx-auto mb-8" />
+          ) : featuredPost ? (
             <h1 className="text-5xl text-center text-gray-900 mb-8 leading-tight">
               {featuredPost.title}
             </h1>
-          )}
+          ) : null}
 
           {/* Poem Content */}
           <div className="max-w-2xl mx-auto">
-            {featuredPost && (
+            {topPosts.length === 0 ? (
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-2/3" />
+              </div>
+            ) : featuredPost ? (
               <div className="font-poetry text-2xl text-gray-800 whitespace-pre-wrap text-center mb-8" style={{ lineHeight: 1.85 }}>
                 {featuredPost.content}
               </div>
-            )}
+            ) : null}
           </div>
 
           <Separator className="my-8" />
@@ -121,23 +138,27 @@ export function DailyPoemPage({ onBack, onPostClick, onUserClick }: DailyPoemPag
           <div className="flex items-center justify-center gap-6">
             <Button
               variant="ghost"
-              onClick={() => setIsLiked(!isLiked)}
-              className={`gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'}`}
+              onClick={postActions.toggleLike}
+              className={`gap-2 ${postActions.isLiked ? 'text-rose-500' : 'text-gray-600'}`}
             >
-              <Heart className={`w-6 h-6 ${isLiked ? 'fill-rose-500' : ''}`} />
-              <span className="text-lg">{featuredPost?.likesCount ?? featuredPost?._count?.likes ?? 0}</span>
+              <Heart className={`w-6 h-6 ${postActions.isLiked ? 'fill-rose-500' : ''}`} />
+              <span className="text-lg">{postActions.likes}</span>
             </Button>
-            <Button variant="ghost" className="gap-2 text-gray-600">
+            <Button 
+              variant="ghost" 
+              onClick={postActions.share}
+              className="gap-2 text-gray-600"
+            >
               <Share2 className="w-6 h-6" />
               <span className="text-lg">Share</span>
             </Button>
             <Button
               variant="ghost"
-              onClick={() => setIsSaved(!isSaved)}
-              className={`gap-2 ${isSaved ? 'text-rose-500' : 'text-gray-600'}`}
+              onClick={postActions.toggleSave}
+              className={`gap-2 ${postActions.isSaved ? 'text-rose-500' : 'text-gray-600'}`}
             >
-              <Bookmark className={`w-6 h-6 ${isSaved ? 'fill-rose-500' : ''}`} />
-              <span className="text-lg">{isSaved ? 'Saved' : 'Save'}</span>
+              <Bookmark className={`w-6 h-6 ${postActions.isSaved ? 'fill-rose-500' : ''}`} />
+              <span className="text-lg">{postActions.isSaved ? 'Saved' : 'Save'}</span>
             </Button>
           </div>
 

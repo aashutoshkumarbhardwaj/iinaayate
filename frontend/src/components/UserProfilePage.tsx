@@ -1,6 +1,7 @@
 import { ArrowLeft, BadgeCheck, BookOpenText, Calendar, ChevronLeft, Heart, MapPin, MoreHorizontal, PenLine, Sparkles, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { userAPI, postAPI } from '../utils/api';
+import { Skeleton } from './ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';

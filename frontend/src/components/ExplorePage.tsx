@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { PostCard } from './PostCard';
 import { Helmet } from 'react-helmet-async';
+import { SkeletonPostCard, SkeletonAuthorCard } from './SkeletonLoader';
 
 interface ExplorePageProps {
   onPostClick: (postId: string) => void;
@@ -425,14 +426,21 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
               </TabsList>
 
               <TabsContent value="all" className="space-y-6">
-                {feedPosts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    onPostClick={onPostClick}
-                    onUserClick={onUserClick}
-                  />
-                ))}
+                {loading && feedPosts.length === 0 ? (
+                  // Show skeletons while loading
+                  [...Array(5)].map((_, i) => (
+                    <SkeletonPostCard key={i} />
+                  ))
+                ) : (
+                  feedPosts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onPostClick={onPostClick}
+                      onUserClick={onUserClick}
+                    />
+                  ))
+                )}
                 <div className="mt-2 flex justify-center">
                   <Button onClick={loadMore} disabled={loading || !hasMore} className="min-w-[160px]">
                     {loading ? 'Loading…' : hasMore ? 'Next page' : 'No more poems'}
@@ -441,15 +449,20 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
               </TabsContent>
 
               <TabsContent value="trending" className="space-y-6">
-                {trendingPosts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    onPostClick={onPostClick}
-                    onUserClick={onUserClick}
-                  />
-                ))}
-                {/* Load More for Trending uses main feed below in Genres tab; keep actions in one place */}
+                {loading && trendingPosts.length === 0 ? (
+                  [...Array(5)].map((_, i) => (
+                    <SkeletonPostCard key={i} />
+                  ))
+                ) : (
+                  trendingPosts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onPostClick={onPostClick}
+                      onUserClick={onUserClick}
+                    />
+                  ))
+                )}
               </TabsContent>
 
               <TabsContent value="genres">
@@ -519,25 +532,31 @@ export function ExplorePage({ onPostClick, onUserClick, onDailyPoemClick, onNavi
                 </h2>
               </div>
               <div className="space-y-4">
-                {topAuthors.map((author, index) => (
-                  <button
-                    key={author.id}
-                    onClick={() => onUserClick(author.id)}
-                    className="flex items-center gap-3 w-full hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                  >
-                    <div className="text-gray-400 w-6">
-                      #{index + 1}
-                    </div>
-                    <Avatar className="w-10 h-10 ring-2 ring-rose-100">
-                      <AvatarImage src={author.avatar} alt={author.name} />
-                      <AvatarFallback>{author.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 text-left">
-                      <p className="text-gray-900">{author.name}</p>
-                      <p className="text-sm text-gray-500">{(author.followersCount ?? author._count?.followers ?? 0).toLocaleString()} followers</p>
-                    </div>
-                  </button>
-                ))}
+                {loading && topAuthors.length === 0 ? (
+                  [...Array(5)].map((_, i) => (
+                    <SkeletonAuthorCard key={i} />
+                  ))
+                ) : (
+                  topAuthors.map((author, index) => (
+                    <button
+                      key={author.id}
+                      onClick={() => onUserClick(author.id)}
+                      className="flex items-center gap-3 w-full hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                    >
+                      <div className="text-gray-400 w-6">
+                        #{index + 1}
+                      </div>
+                      <Avatar className="w-10 h-10 ring-2 ring-rose-100">
+                        <AvatarImage src={author.avatar} alt={author.name} />
+                        <AvatarFallback>{author.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 text-left">
+                        <p className="text-gray-900">{author.name}</p>
+                        <p className="text-sm text-gray-500">{(author.followersCount ?? author._count?.followers ?? 0).toLocaleString()} followers</p>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 

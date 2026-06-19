@@ -9,6 +9,7 @@ import { commentAPI, postAPI, userAPI, transliterateAPI } from '../utils/api';
 import { Helmet } from 'react-helmet-async';
 import { simplifyText, hasSimplifiableText } from '../utils/textNormalization';
 import { PostOwnerMenu } from './PostOwnerMenu';
+import { Skeleton } from './ui/skeleton';
 
 interface PostDetailsPageProps {
   postId: string;
@@ -101,8 +102,58 @@ export function PostDetailsPage({ postId, onBack, onUserClick, onPostClick }: Po
 
   if (!post || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Post not found</p>
+      <div className="min-h-screen bg-app">
+        <div className="max-w-3xl mx-auto px-4 py-8">
+          {/* Header skeleton */}
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <Skeleton className="h-10 w-24 rounded" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+          </div>
+
+          {/* Title skeleton */}
+          <Skeleton className="h-12 w-3/4 rounded mb-4 mx-auto" />
+          <Skeleton className="h-4 w-1/3 rounded mx-auto mb-8" />
+
+          {/* Language chips skeleton */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Skeleton className="h-8 w-16 rounded-full" />
+            <Skeleton className="h-8 w-16 rounded-full" />
+            <Skeleton className="h-8 w-16 rounded-full" />
+          </div>
+
+          {/* Toggle buttons skeleton */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Skeleton className="h-10 w-24 rounded-full" />
+            <Skeleton className="h-10 w-32 rounded-full" />
+          </div>
+
+          {/* Content skeleton */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-10 shadow-sm mb-6">
+            <div className="space-y-3">
+              <Skeleton className="h-6 w-full rounded" />
+              <Skeleton className="h-6 w-full rounded" />
+              <Skeleton className="h-6 w-2/3 rounded" />
+            </div>
+          </div>
+
+          {/* Actions skeleton */}
+          <div className="flex items-center justify-center gap-6 text-gray-600 mb-10">
+            <Skeleton className="h-6 w-12 rounded" />
+            <Skeleton className="h-6 w-12 rounded" />
+            <Skeleton className="h-6 w-16 rounded" />
+            <Skeleton className="h-6 w-12 rounded" />
+          </div>
+
+          {/* Author card skeleton */}
+          <div className="flex items-start gap-4 mb-12">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-32 rounded" />
+              <Skeleton className="h-4 w-48 rounded" />
+            </div>
+            <Skeleton className="h-10 w-24 rounded-full" />
+          </div>
+        </div>
       </div>
     );
   }
